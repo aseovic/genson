@@ -1,14 +1,15 @@
 package com.owlike.genson.ext.jackson;
 
-import com.owlike.genson.GensonBuilder;
-import com.owlike.genson.Trilean;
-import com.owlike.genson.ext.GensonBundle;
-import com.owlike.genson.reflect.BeanMutatorAccessorResolver;
-import com.owlike.genson.reflect.PropertyNameResolver;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import com.owlike.genson.GensonBuilder;
+
+import com.owlike.genson.ext.GensonBundle;
+
+import com.owlike.genson.reflect.BeanMutatorAccessorResolver.AnnotationPropertyResolver;
+import com.owlike.genson.reflect.PropertyNameResolver.AnnotationPropertyNameResolver;
 
 /**
  * Genson bundle which allows usage of Jackson annotations for serialization.
@@ -18,62 +19,23 @@ import java.lang.reflect.Method;
 public class JacksonBundle extends GensonBundle {
     @Override
     public void configure(GensonBuilder builder) {
-        builder
-              .with(new JacksonAnnotationsResolver())
-              .with(new JacksonNameResolver());
+        builder.with(new JacksonAnnotationPropertyResolver()).with(new JacksonAnnotationPropertyNameResolver());
     }
 
-    private static class JacksonAnnotationsResolver implements BeanMutatorAccessorResolver {
-        @Override
-        public Trilean isCreator(Constructor<?> constructor, Class<?> fromClass) {
-            return null;
-        }
-
-        @Override
-        public Trilean isCreator(Method method, Class<?> fromClass) {
-            return null;
-        }
-
-        @Override
-        public Trilean isAccessor(Field field, Class<?> fromClass) {
-            return null;
-        }
-
-        @Override
-        public Trilean isAccessor(Method method, Class<?> fromClass) {
-            return null;
-        }
-
-        @Override
-        public Trilean isMutator(Field field, Class<?> fromClass) {
-            return null;
-        }
-
-        @Override
-        public Trilean isMutator(Method method, Class<?> fromClass) {
-            return null;
-        }
+    private static class JacksonAnnotationPropertyResolver extends AnnotationPropertyResolver {
+      public JacksonAnnotationPropertyResolver() {
+        super(JsonProperty.class, JsonIgnore.class, JsonCreator.class);
+      }
     }
 
-    private class JacksonNameResolver implements PropertyNameResolver {
-        @Override
-        public String resolve(int parameterIdx, Constructor<?> fromConstructor) {
-            return null;
-        }
+    private static class JacksonAnnotationPropertyNameResolver extends AnnotationPropertyNameResolver<JsonProperty> {
+      public JacksonAnnotationPropertyNameResolver() {
+        super(JsonProperty.class);
+      }
 
-        @Override
-        public String resolve(int parameterIdx, Method fromMethod) {
-            return null;
-        }
-
-        @Override
-        public String resolve(Field fromField) {
-            return null;
-        }
-
-        @Override
-        public String resolve(Method fromMethod) {
-            return null;
-        }
+      @Override
+      protected String getNameFromAnnotation(final JsonProperty annotation) {
+        return annotation.value();
+      }
     }
 }

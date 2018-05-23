@@ -1,5 +1,6 @@
 package com.owlike.genson.reflect;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -12,6 +13,7 @@ import java.util.List;
 
 import static com.owlike.genson.Trilean.FALSE;
 import static com.owlike.genson.Trilean.TRUE;
+import static com.owlike.genson.Trilean.UNKNOWN;
 
 import com.owlike.genson.JsonBindingException;
 import com.owlike.genson.Trilean;
@@ -61,32 +63,355 @@ public interface BeanMutatorAccessorResolver {
   class PropertyBaseResolver implements BeanMutatorAccessorResolver {
     @Override
     public Trilean isAccessor(Field field, Class<?> fromClass) {
-      return Trilean.UNKNOWN;
+      return UNKNOWN;
     }
 
     @Override
     public Trilean isAccessor(Method method, Class<?> fromClass) {
-      return Trilean.UNKNOWN;
+      return UNKNOWN;
     }
 
     @Override
     public Trilean isCreator(Constructor<?> constructor, Class<?> fromClass) {
-      return Trilean.UNKNOWN;
+      return UNKNOWN;
     }
 
     @Override
     public Trilean isCreator(Method method, Class<?> fromClass) {
-      return Trilean.UNKNOWN;
+      return UNKNOWN;
     }
 
     @Override
     public Trilean isMutator(Field field, Class<?> fromClass) {
-      return Trilean.UNKNOWN;
+      return UNKNOWN;
     }
 
     @Override
     public Trilean isMutator(Method method, Class<?> fromClass) {
-      return Trilean.UNKNOWN;
+      return UNKNOWN;
+    }
+  }
+
+  /**
+   * A basic {@link Annotation} scanning {@link BeanMutatorAccessorResolver} assuming the use of three
+   * primary {@link Annotation}s:
+   * <ul>
+   *   <li>
+   *     <code>propertyAnnotation</code>: an annotation, such as {@link JsonProperty}, denoting a property
+   *     to serialize/deserialize.
+   *   </li>
+   *   <li>
+   *     <code>exclusionAnnotation</code>: an annotation, such as {@link JsonIgnore} denoting an exclusion of a
+   *     property from serialization/deserialization.
+   *  </li>
+   *  <li>
+   *    <code>creatorAnnotation</code>: an annotation, such as {@link JsonCreator} denoting a constructor or
+   *    factory method to use when deserializing an entity.
+   *  </li>
+   * </ul>
+   *
+   * @since 1.5.0
+   */
+  class AnnotationPropertyResolver implements BeanMutatorAccessorResolver {
+    /**
+     * An {@link Annotation} that functions similarly to {@link JsonProperty}.
+     */
+    protected Class<? extends Annotation> propertyAnnotation;
+
+    /**
+     * An {@link Annotation} that functions similarly to {@link JsonIgnore}.
+     */
+    protected Class<? extends Annotation> exclusionAnnotation;
+
+    /**
+     * An {@link Annotation} that functions similarly to {@link JsonCreator}.
+     * This value may be <code>null</code>.
+     */
+    protected Class<? extends Annotation> creatorAnnotation;
+
+    /**
+     * Create a new resolver for the specified annotations.  The notion of property, exclusion, and creator
+     * will be carried forward in the documentation of the class.
+     *
+     * @param propertyAnnotation  @see {@link #propertyAnnotation}
+     * @param exclusionAnnotation @see {@link #exclusionAnnotation}
+     * @param creatorAnnotation   @see {@link #creatorAnnotation}
+     */
+    public AnnotationPropertyResolver(Class<? extends Annotation> propertyAnnotation,
+                                      Class<? extends Annotation> exclusionAnnotation,
+                                      Class<? extends Annotation> creatorAnnotation) {
+      this.propertyAnnotation = propertyAnnotation;
+      this.exclusionAnnotation = exclusionAnnotation;
+      this.creatorAnnotation = creatorAnnotation;
+    }
+
+    /**
+     * Determines if the configured {@link #creatorAnnotation} is present on the provided {@link Constructor}.
+     *
+     * @param constructor the {@link Constructor} to scan
+     * @param fromClass   the {@link Class} the {@link Constructor} is associated with
+     *
+     * @return {@link Trilean#TRUE} if the {@link #creatorAnnotation} is found, otherwise {@link Trilean#UNKNOWN}
+     */
+    @Override
+    public Trilean isCreator(Constructor<?> constructor, Class<?> fromClass) {
+      if (creatorAnnotation != null) {
+        /*
+         * hum... it depends on different things, such as parameters name resolution, types, etc
+         * but we are not supposed to handle it here... lets only check visibility and handle it
+         * in the provider implementations
+         */
+        if (find(creatorAnnotation, constructor, fromClass) != null) {
+            return TRUE;
+        }
+      }
+      return UNKNOWN;
+    }
+
+    /**
+     * Determines if the configured {@link #creatorAnnotation} is present on the provided {@link Method}.
+     *
+     * @param method    the {@link Method} to scan
+     * @param fromClass the {@link Class} the {@link Method} is associated with
+     *
+     * @throws JsonBindingException if the annotated {@link Method} is not <code>public</code> and <code>static</code>
+     *
+     * @return {@link Trilean#TRUE} if the {@link #creatorAnnotation} is found, otherwise {@link Trilean#UNKNOWN}
+     */
+    @Override
+    public Trilean isCreator(Method method, Class<?> fromClass) {
+      if (creatorAnnotation != null) {
+        if (find(creatorAnnotation, method, fromClass) != null) {
+          if (Modifier.isPublic(method.getModifiers()) && Modifier.isStatic(method.getModifiers())) {
+              return TRUE;
+          } else {
+            throw new JsonBindingException(String.format("Method [%s] annotated with [%s] must be static!",
+                method.toGenericString(), creatorAnnotation));
+          }
+        }
+      }
+      return UNKNOWN;
+    }
+
+    /**
+     * Determines if the configured {@link #propertyAnnotation} is present on the provided {@link Field}.
+     * Invoked during serialization.
+     *
+     * @param field     the {@link Field} to scan
+     * @param fromClass the {@link Class} the {@link Field} is associated with
+     *
+     * @return {@link Trilean#FALSE} if the {@link Field} is annotated with the {@link #exclusionAnnotation},
+     *   {@link Trilean#TRUE} if the {@link #propertyAnnotation} is found, otherwise returns {@link Trilean#UNKNOWN}
+     */
+    @Override
+    public Trilean isAccessor(Field field, Class<?> fromClass) {
+      if (field.isSynthetic() || ignore(field, field.getType(), true)) {
+        return FALSE;
+      }
+      if (include(field, field.getType(), true)) {
+        return TRUE;
+      }
+      return UNKNOWN;
+    }
+
+    /**
+     * Determines if the configured {@link #propertyAnnotation} is present on the provided {@link Field}.
+     * Invoked during serialization.
+     *
+     * @param method    the {@link Method} to scan
+     * @param fromClass the {@link Class} the {@link Field} is associated with
+     *
+     * @return {@link Trilean#FALSE} if the {@link Method} is annotated with the {@link #exclusionAnnotation},
+     *   {@link Trilean#TRUE} if the {@link #propertyAnnotation} is found, otherwise returns {@link Trilean#UNKNOWN}
+     */
+    @Override
+    public Trilean isAccessor(Method method, Class<?> fromClass) {
+      if (ignore(method, method.getReturnType(), true)) return FALSE;
+
+      String name = getGetterName(method);
+
+      if (name != null) {
+        if (include(method, method.getReturnType(), true)) return TRUE;
+        if (find(exclusionAnnotation, fromClass, "set" + name, method.getReturnType()) != null)
+          return FALSE;
+      }
+      return UNKNOWN;
+    }
+
+    /**
+     * Determines if the configured {@link #propertyAnnotation} is present on the provided {@link Field}.
+     * Invoked during deserialization.
+     *
+     * @param field     the {@link Field} to scan
+     * @param fromClass the {@link Class} the {@link Field} is associated with
+     *
+     * @return {@link Trilean#FALSE} if the {@link Field} is annotated with the {@link #exclusionAnnotation},
+     *   {@link Trilean#TRUE} if the {@link #propertyAnnotation} is found, otherwise returns {@link Trilean#UNKNOWN}
+     */
+    @Override
+    public Trilean isMutator(Field field, Class<?> fromClass) {
+      if (field.isSynthetic() || ignore(field, field.getType(), false)) {
+        return FALSE;
+      }
+      if (include(field, field.getType(), false)) {
+        return TRUE;
+      }
+      return UNKNOWN;
+    }
+
+    /**
+     * Determines if the configured {@link #propertyAnnotation} is present on the provided {@link Field}.
+     * Invoked during serialization.
+     *
+     * @param method    the {@link Method} to scan
+     * @param fromClass the {@link Class} the {@link Field} is associated with
+     *
+     * @return {@link Trilean#FALSE} if the {@link Method} is annotated with the {@link #exclusionAnnotation},
+     *   {@link Trilean#TRUE} if the {@link #propertyAnnotation} is found, otherwise returns {@link Trilean#UNKNOWN}
+     */
+    @Override
+    public Trilean isMutator(Method method, Class<?> fromClass) {
+      Class<?> paramClass = method.getParameterTypes().length == 1 ? method
+          .getParameterTypes()[0] : Object.class;
+      if (ignore(method, paramClass, false)) return FALSE;
+
+      String name = getSetterName(method);
+      if (name != null) {
+        if (include(method, method.getReturnType(), false)) return TRUE;
+
+        // Exclude it if there is a corresponding accessor annotated with JsonIgnore
+        if (find(exclusionAnnotation, fromClass, "get" + name) != null) return FALSE;
+        if (paramClass.equals(boolean.class) || paramClass.equals(Boolean.class)) {
+          if (find(exclusionAnnotation, fromClass, "is" + name) != null)
+            return FALSE;
+        }
+      }
+      return UNKNOWN;
+    }
+
+    /**
+     * Return the property name based on argument {@link Method}.  This assumes a <code>getter</code> using standard
+     * Java Beans naming conventions.
+     *
+     * @param method the {@link Method} to extract the name from
+     *
+     * @return the property name or <code>null</code> if the method isn't a <code>getter</code>.
+     */
+    protected String getGetterName(Method method) {
+      String name = method.getName();
+      Class<?> returnType = method.getReturnType();
+      if (name.startsWith("get") && name.length() > 3) {
+        return name.substring(3);
+      } else if (name.startsWith("is") && name.length() > 2
+          && (returnType == boolean.class || returnType == Boolean.class)) {
+        return name.substring(2);
+      }
+      return null;
+    }
+
+    /**
+     * Return the property name based on argument {@link Method}.  This assumes a <code>setter</code> using standard
+     * Java Beans naming conventions.
+     *
+     * @param method the {@link Method} to extract the name from
+     *
+     * @return the property name or <code>null</code> if the method isn't a <code>setter</code>.
+     */
+    protected String getSetterName(Method method) {
+      String name = method.getName();
+      if (name.startsWith("set") && name.length() > 3) {
+        return name.substring(3);
+      }
+      return null;
+    }
+
+    /**
+     * Scans for the presence of the {@link #exclusionAnnotation}/
+     *
+     * @param property the property to scan
+     * @param ofType the associated {@link Class}
+     * @param forSerialization flag indicating if this exclusion check is for a serialization
+     *                         or deserialization operation
+     *
+     * @return <code>true</code> if the {@link Annotation} is found, otherwise <code>false</code>
+     */
+    @SuppressWarnings("unused")
+    protected boolean ignore(AccessibleObject property, Class<?> ofType, boolean forSerialization) {
+      return find(exclusionAnnotation, property, ofType) != null;
+    }
+
+    /**
+     * Scans for the presence of the {@link #propertyAnnotation}.
+     *
+     * @param property the property to scan
+     * @param ofType the associated {@link Class}
+     * @param forSerialization flag indicating if this exclusion check is for a serialization
+     *                         or deserialization operation
+     *
+     * @return <code>true</code> if the {@link Annotation} is found, otherwise <code>false</code>
+     */
+    @SuppressWarnings("unused")
+    protected boolean include(AccessibleObject property, Class<?> ofType, boolean forSerialization) {
+      return find(propertyAnnotation, property, ofType) != null;
+    }
+
+    /**
+     * Scan for the argument {@link Annotation} on the argument {@link AccessibleObject}.
+     *
+     * @param annotation the {@link Annotation} to scan for
+     * @param onObject the entity that may be annotated with the specified {@link Annotation}
+     * @param onClass the {@link Class} associated with the {@link AccessibleObject}
+     *
+     * @return the {@link Annotation} if found, otherwise returns <code>null</code>
+     */
+    protected <A extends Annotation> A find(Class<A> annotation, AccessibleObject onObject, Class<?> onClass) {
+      A ann = onObject.getAnnotation(annotation);
+      if (ann != null) return ann;
+      return find(annotation, onClass);
+    }
+
+    /**
+     * Scan for the argument {@link Annotation} on the argument {@link Class}.
+     *
+     * @param annotation the {@link Annotation} to scan for
+     * @param onClass the {@link Class} to scan
+     *
+     * @return the {@link Annotation} if found, otherwise returns <code>null</code>
+     */
+    protected <A extends Annotation> A find(Class<A> annotation, Class<?> onClass) {
+      A ann = onClass.getAnnotation(annotation);
+      if (ann == null && onClass.getPackage() != null)
+        ann = onClass.getPackage().getAnnotation(annotation);
+      return ann;
+    }
+
+    /**
+     * Scan for the argument {@link Annotation} on a method matching the argument method names and parameters.
+     *
+     * @param annotation the {@link} Annotation to scan for
+     * @param inClass the {@link Class} to search for a matching method
+     * @param methodName the method's name
+     * @param parameterTypes the method's argument types
+     *
+     * @return the {@link Annotation} if found, otherwise returns <code>null</code>
+     */
+    protected <A extends Annotation> A find(Class<A> annotation, Class<?> inClass, String methodName,
+                                            Class<?>... parameterTypes) {
+      for (Class<?> clazz = inClass; clazz != null; clazz = clazz.getSuperclass()) {
+        try {
+          for (Method m : clazz.getDeclaredMethods())
+            if (m.getName().equals(methodName)
+                && Arrays.equals(m.getParameterTypes(), parameterTypes))
+              if (m.isAnnotationPresent(annotation))
+                return m.getAnnotation(annotation);
+              else
+                break;
+
+        } catch (SecurityException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return null;
     }
   }
 
@@ -98,7 +423,7 @@ public interface BeanMutatorAccessorResolver {
         throw new IllegalArgumentException(
           "The composite resolver must have at least one resolver as component!");
       }
-      this.components = new LinkedList<BeanMutatorAccessorResolver>(components);
+      this.components = new LinkedList<>(components);
     }
 
     public CompositeResolver add(BeanMutatorAccessorResolver... resolvers) {
@@ -108,8 +433,8 @@ public interface BeanMutatorAccessorResolver {
 
     @Override
     public Trilean isAccessor(Field field, Class<?> fromClass) {
-      Trilean resolved = Trilean.UNKNOWN;
-      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(Trilean.UNKNOWN)
+      Trilean resolved = UNKNOWN;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
         && it.hasNext(); ) {
         resolved = it.next().isAccessor(field, fromClass);
       }
@@ -118,8 +443,8 @@ public interface BeanMutatorAccessorResolver {
 
     @Override
     public Trilean isAccessor(Method method, Class<?> fromClass) {
-      Trilean resolved = Trilean.UNKNOWN;
-      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(Trilean.UNKNOWN)
+      Trilean resolved = UNKNOWN;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
         && it.hasNext(); ) {
         resolved = it.next().isAccessor(method, fromClass);
       }
@@ -128,8 +453,8 @@ public interface BeanMutatorAccessorResolver {
 
     @Override
     public Trilean isCreator(Constructor<?> constructor, Class<?> fromClass) {
-      Trilean resolved = Trilean.UNKNOWN;
-      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(Trilean.UNKNOWN)
+      Trilean resolved = UNKNOWN;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
         && it.hasNext(); ) {
         resolved = it.next().isCreator(constructor, fromClass);
       }
@@ -138,8 +463,8 @@ public interface BeanMutatorAccessorResolver {
 
     @Override
     public Trilean isCreator(Method method, Class<?> fromClass) {
-      Trilean resolved = Trilean.UNKNOWN;
-      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(Trilean.UNKNOWN)
+      Trilean resolved = UNKNOWN;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
         && it.hasNext(); ) {
         resolved = it.next().isCreator(method, fromClass);
       }
@@ -148,8 +473,8 @@ public interface BeanMutatorAccessorResolver {
 
     @Override
     public Trilean isMutator(Field field, Class<?> fromClass) {
-      Trilean resolved = Trilean.UNKNOWN;
-      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(Trilean.UNKNOWN)
+      Trilean resolved = UNKNOWN;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
         && it.hasNext(); ) {
         resolved = it.next().isMutator(field, fromClass);
       }
@@ -158,8 +483,8 @@ public interface BeanMutatorAccessorResolver {
 
     @Override
     public Trilean isMutator(Method method, Class<?> fromClass) {
-      Trilean resolved = Trilean.UNKNOWN;
-      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(Trilean.UNKNOWN)
+      Trilean resolved = UNKNOWN;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
         && it.hasNext(); ) {
         resolved = it.next().isMutator(method, fromClass);
       }
@@ -167,82 +492,26 @@ public interface BeanMutatorAccessorResolver {
     }
   }
 
-  class GensonAnnotationsResolver implements BeanMutatorAccessorResolver {
-    public Trilean isAccessor(Field field, Class<?> fromClass) {
-      // ok to look for this$ is ugly but it will do the job for the moment
-      if (mustIgnore(field, true) || field.getName().startsWith("this$"))
-        return FALSE;
-      if (mustInclude(field, true))
-        return TRUE;
-      return Trilean.UNKNOWN;
+  class GensonAnnotationPropertyResolver extends AnnotationPropertyResolver {
+
+    public GensonAnnotationPropertyResolver() {
+      super(JsonProperty.class, JsonIgnore.class, JsonCreator.class);
     }
 
-    public Trilean isAccessor(Method method, Class<?> fromClass) {
-      if (mustIgnore(method, true))
-        return FALSE;
-      if (mustInclude(method, true) && method.getParameterTypes().length == 0)
-        return TRUE;
-
-      return Trilean.UNKNOWN;
-    }
-
-    public Trilean isCreator(Constructor<?> constructor, Class<?> fromClass) {
-      /*
-			 * hum... it depends on different things, such as parameters name resolution, types, etc
-			 * but we are not supposed to handle it here... lets only check visibility and handle it
-			 * in the provider implementations
-			 */
-      if (mustIgnore(constructor, false))
-        return FALSE;
-      return Trilean.UNKNOWN;
-    }
-
-    public Trilean isCreator(Method method, Class<?> fromClass) {
-      if (method.getAnnotation(JsonCreator.class) != null) {
-        if (Modifier.isPublic(method.getModifiers())
-          && Modifier.isStatic(method.getModifiers()))
-          return TRUE;
-        throw new JsonBindingException("Method " + method.toGenericString()
-          + " annotated with @JsonCreator must be static!");
-      }
-      return FALSE;
-    }
-
-    public Trilean isMutator(Field field, Class<?> fromClass) {
-      if (mustIgnore(field, false) || field.getName().startsWith("this$"))
-        return FALSE;
-      if (mustInclude(field, false))
-        return TRUE;
-      return Trilean.UNKNOWN;
-    }
-
-    public Trilean isMutator(Method method, Class<?> fromClass) {
-      if (mustIgnore(method, false))
-        return FALSE;
-      if (mustInclude(method, false) && method.getParameterTypes().length == 1)
-        return TRUE;
-
-      return Trilean.UNKNOWN;
-    }
-
-    protected boolean mustIgnore(AccessibleObject property, boolean forSerialization) {
-      JsonIgnore ignore = property.getAnnotation(JsonIgnore.class);
-      if (ignore != null) {
-        if (forSerialization)
-          return !ignore.serialize();
-        else
-          return !ignore.deserialize();
+    @Override
+    protected boolean ignore(final AccessibleObject property, final Class<?> ofType, final boolean forSerialization) {
+      if (super.ignore(property, ofType, forSerialization)) {
+        JsonIgnore ignore = find(JsonIgnore.class, property, property.getClass());
+        return ((forSerialization) ? !ignore.serialize() : !ignore.deserialize());
       }
       return false;
     }
 
-    protected boolean mustInclude(AccessibleObject property, boolean forSerialization) {
-      JsonProperty prop = property.getAnnotation(JsonProperty.class);
-      if (prop != null) {
-        if (forSerialization)
-          return prop.serialize();
-        else
-          return prop.deserialize();
+    @Override
+    protected boolean include(final AccessibleObject property, final Class<?> ofType, final boolean forSerialization) {
+      if (super.include(property, ofType, forSerialization)) {
+        JsonProperty prop = find(JsonProperty.class, property, property.getClass());
+        return ((forSerialization) ? prop.serialize() : prop.deserialize());
       }
       return false;
     }
@@ -272,14 +541,14 @@ public interface BeanMutatorAccessorResolver {
     /**
      * Use this constructor if you want to customize the visibility filtering.
      *
-     * @param filedVisibilityFilter
-     * @param methodVisibilityFilter
-     * @param creatorVisibilityFilter
+     * @param fieldVisibilityFilter {@link VisibilityFilter} for object fields
+     * @param methodVisibilityFilter {@link VisibilityFilter} for object getters and setters
+     * @param creatorVisibilityFilter {@link VisibilityFilter} for constructors
      */
-    public StandardMutaAccessorResolver(VisibilityFilter filedVisibilityFilter,
+    public StandardMutaAccessorResolver(VisibilityFilter fieldVisibilityFilter,
                                         VisibilityFilter methodVisibilityFilter, VisibilityFilter creatorVisibilityFilter) {
       super();
-      this.fieldVisibilityFilter = filedVisibilityFilter;
+      this.fieldVisibilityFilter = fieldVisibilityFilter;
       this.methodVisibilityFilter = methodVisibilityFilter;
       this.creatorVisibilityFilter = creatorVisibilityFilter;
     }
