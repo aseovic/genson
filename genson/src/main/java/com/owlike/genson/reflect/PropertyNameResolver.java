@@ -27,20 +27,22 @@ public interface PropertyNameResolver {
   /**
    * Resolve the parameter name on position parameterIdx in the constructor fromConstructor.
    *
-   * @param parameterIdx
-   * @param fromConstructor
-   * @return the resolved name of the parameter or null
+   * @param parameterIdx parameter index
+   * @param fromConstructor the constructor being processed
+   *
+   * @return the resolved name of the parameter or <code>null</code>
    */
-  public String resolve(int parameterIdx, Constructor<?> fromConstructor);
+  String resolve(int parameterIdx, Constructor<?> fromConstructor);
 
   /**
    * Resolve the name of the parameter with parameterIdx as index in fromMethod method.
    *
-   * @param parameterIdx
-   * @param fromMethod
-   * @return the resolved name of the parameter or null
+   * @param parameterIdx parameter index
+   * @param fromMethod the method being processed
+   *
+   * @return the resolved name of the parameter or <code>null</code>
    */
-  public String resolve(int parameterIdx, Method fromMethod);
+  String resolve(int parameterIdx, Method fromMethod);
 
   /**
    * Resolve the property name from this field.
@@ -48,7 +50,7 @@ public interface PropertyNameResolver {
    * @param fromField - the field to use for name resolution.
    * @return the resolved name or null.
    */
-  public String resolve(Field fromField);
+  String resolve(Field fromField);
 
   /**
    * Resolve the property name from this method.
@@ -56,9 +58,9 @@ public interface PropertyNameResolver {
    * @param fromMethod - the method to be used for name resolution.
    * @return the resolved name or null.
    */
-  public String resolve(Method fromMethod);
+  String resolve(Method fromMethod);
 
-  public static class CompositePropertyNameResolver implements PropertyNameResolver {
+  class CompositePropertyNameResolver implements PropertyNameResolver {
     private List<PropertyNameResolver> components;
 
     public CompositePropertyNameResolver(List<PropertyNameResolver> components) {
@@ -66,7 +68,7 @@ public interface PropertyNameResolver {
         throw new IllegalArgumentException(
           "The composite resolver must have at least one resolver as component!");
       }
-      this.components = new LinkedList<PropertyNameResolver>(components);
+      this.components = new LinkedList<>(components);
     }
 
     public CompositePropertyNameResolver add(PropertyNameResolver... resolvers) {
@@ -113,7 +115,7 @@ public interface PropertyNameResolver {
 
   }
 
-  public static class ConventionalBeanPropertyNameResolver implements PropertyNameResolver {
+  class ConventionalBeanPropertyNameResolver implements PropertyNameResolver {
 
     public String resolve(int parameterIdx, Constructor<?> fromConstructor) {
       return null;
@@ -150,32 +152,24 @@ public interface PropertyNameResolver {
    * JsonProperty resolver based on @JsonProperty annotation. Can be used on fields, methods and
    * constructor parameters.
    */
-  public static class AnnotationPropertyNameResolver implements PropertyNameResolver {
-    public AnnotationPropertyNameResolver() {
+  abstract class AnnotationPropertyNameResolver<A extends Annotation> implements PropertyNameResolver {
+    /**
+     * An {@link Annotation} that functions similarly to {@link JsonProperty}.
+     */
+    protected Class<A> propertyAnnotation;
+
+    public AnnotationPropertyNameResolver(Class<A> propertyAnnotation) {
+      this.propertyAnnotation = propertyAnnotation;
     }
 
+    @SuppressWarnings("unchecked")
     public String resolve(int parameterIdx, Constructor<?> fromConstructor) {
-      Annotation[] paramAnns = fromConstructor.getParameterAnnotations()[parameterIdx];
-      String name = null;
-      for (int j = 0; j < paramAnns.length; j++) {
-        if (paramAnns[j] instanceof JsonProperty) {
-          name = ((JsonProperty) paramAnns[j]).value();
-          break;
-        }
-      }
-      return "".equals(name) ? null : name;
+      return getNameFromParameterAnnotations(fromConstructor.getParameterAnnotations()[parameterIdx]);
     }
 
+    @SuppressWarnings("unchecked")
     public String resolve(int parameterIdx, Method fromMethod) {
-      Annotation[] anns = fromMethod.getParameterAnnotations()[parameterIdx];
-      String name = null;
-      for (Annotation ann : anns) {
-        if (ann instanceof JsonProperty) {
-          name = ((JsonProperty) ann).value();
-          break;
-        }
-      }
-      return "".equals(name) ? null : name;
+      return getNameFromParameterAnnotations(fromMethod.getParameterAnnotations()[parameterIdx]);
     }
 
     public String resolve(Field fromField) {
@@ -187,9 +181,38 @@ public interface PropertyNameResolver {
     }
 
     protected String getName(AnnotatedElement annElement) {
-      JsonProperty name = annElement.getAnnotation(JsonProperty.class);
-      return name != null && name.value() != null && !name.value().isEmpty() ? name.value()
-        : null;
+      A annotation = annElement.getAnnotation(propertyAnnotation);
+      if (annotation != null) {
+        String name = getNameFromAnnotation(annotation);
+        return "".equals(name) ? null : name;
+      }
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected String getNameFromParameterAnnotations(Annotation[] annotations) {
+      String name = null;
+      for (int i = 0, len = annotations.length; i < len; i++) {
+        Annotation annotation = annotations[i];
+        if (propertyAnnotation.isInstance(annotation)) {
+          name = getNameFromAnnotation((A) annotation);
+          break;
+        }
+      }
+      return "".equals(name) ? null : name;
+    }
+
+    protected abstract String getNameFromAnnotation(A annotation);
+  }
+
+  class GensonAnnotationPropertyNameResolver extends AnnotationPropertyNameResolver<JsonProperty> {
+    public GensonAnnotationPropertyNameResolver() {
+      super(JsonProperty.class);
+    }
+
+    @Override
+    protected String getNameFromAnnotation(final JsonProperty annotation) {
+      return annotation.value();
     }
   }
 }

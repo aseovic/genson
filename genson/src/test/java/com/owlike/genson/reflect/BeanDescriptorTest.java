@@ -132,7 +132,7 @@ public class BeanDescriptorTest {
   @Test
   public void jsonWithJsonIgnore() throws SecurityException, NoSuchFieldException {
     BeanMutatorAccessorResolver strategy = new BeanMutatorAccessorResolver.CompositeResolver(
-      Arrays.asList(new BeanMutatorAccessorResolver.GensonAnnotationsResolver(),
+      Arrays.asList(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver(),
         new BeanMutatorAccessorResolver.StandardMutaAccessorResolver()));
     BeanDescriptor<ClassWithIgnoredProperties> bd = genson.getBeanDescriptorProvider()
                                                       .provide(ClassWithIgnoredProperties.class, genson);
@@ -152,7 +152,7 @@ public class BeanDescriptorTest {
   @Test
   public void jsonInclusionWithJsonProperty() throws SecurityException, NoSuchFieldException {
     BeanMutatorAccessorResolver strategy = new BeanMutatorAccessorResolver.CompositeResolver(
-      Arrays.asList(new BeanMutatorAccessorResolver.GensonAnnotationsResolver(),
+      Arrays.asList(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver(),
         new BeanMutatorAccessorResolver.StandardMutaAccessorResolver()));
 
     assertTrue(strategy.isAccessor(ClassWithIgnoredProperties.class.getDeclaredField("p"),

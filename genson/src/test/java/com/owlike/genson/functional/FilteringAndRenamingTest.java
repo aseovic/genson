@@ -1,11 +1,8 @@
 package com.owlike.genson.functional;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.List;
 
 import com.owlike.genson.GensonBuilder;
-import com.owlike.genson.Trilean;
 import com.owlike.genson.annotation.JsonProperty;
 import com.owlike.genson.reflect.BeanMutatorAccessorResolver;
 import org.junit.Test;
@@ -25,7 +22,7 @@ public class FilteringAndRenamingTest {
 
     Genson genson = new GensonBuilder()
       .exclude(Object.class)
-      .with(new BeanMutatorAccessorResolver.GensonAnnotationsResolver())
+      .with(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver())
       .create();
 
 
