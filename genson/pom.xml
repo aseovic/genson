@@ -120,6 +120,13 @@
     </dependency>
 
     <dependency>
+      <groupId>javax.json.bind</groupId>
+      <artifactId>javax.json.bind-api</artifactId>
+      <version>1.0</version>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
       <groupId>org.glassfish.jersey.containers</groupId>
       <artifactId>jersey-container-servlet</artifactId>
       <version>2.12</version>

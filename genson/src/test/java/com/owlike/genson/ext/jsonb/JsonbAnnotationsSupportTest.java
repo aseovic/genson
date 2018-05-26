@@ -1,13 +1,12 @@
-package com.owlike.genson.ext.jackson;
+package com.owlike.genson.ext.jsonb;
 
 import com.owlike.genson.ext.GensonBundle;
 
 import com.owlike.genson.ext.common.BaseAnnotationTest;
 
-
-public class JacksonAnnotationsSupportTest extends BaseAnnotationTest {
+public class JsonbAnnotationsSupportTest extends BaseAnnotationTest {
   @Override
   protected GensonBundle createTestBundle() {
-    return new JacksonBundle();
+    return new JsonbBundle();
   }
 }
