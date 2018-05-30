@@ -31,11 +31,11 @@ import java.util.*;
  * @author eugen
  */
 public class GensonBuilder {
-  private final Map<Type, Serializer<?>> serializersMap = new HashMap<Type, Serializer<?>>();
-  private final Map<Type, Deserializer<?>> deserializersMap = new HashMap<Type, Deserializer<?>>();
-  private final List<Factory<?>> converterFactories = new ArrayList<Factory<?>>();
-  private final List<ContextualFactory<?>> contextualFactories = new ArrayList<ContextualFactory<?>>();
-  private final List<BeanPropertyFactory> beanPropertyFactories = new ArrayList<BeanPropertyFactory>();
+  private final Map<Type, Serializer<?>> serializersMap = new HashMap<>();
+  private final Map<Type, Deserializer<?>> deserializersMap = new HashMap<>();
+  private final List<Factory<?>> converterFactories = new ArrayList<>();
+  private final List<ContextualFactory<?>> contextualFactories = new ArrayList<>();
+  private final List<BeanPropertyFactory> beanPropertyFactories = new ArrayList<>();
 
   private boolean skipNull = false;
   private boolean htmlSafe = false;
@@ -767,19 +767,19 @@ public class GensonBuilder {
     addDefaultSerializers(getDefaultSerializers());
     addDefaultDeserializers(getDefaultDeserializers());
 
-    List<Factory<? extends Converter<?>>> convFactories = new ArrayList<Factory<? extends Converter<?>>>();
+    List<Factory<? extends Converter<?>>> convFactories = new ArrayList<>();
     addDefaultConverterFactories(convFactories);
     converterFactories.addAll(convFactories);
 
-    List<Factory<? extends Serializer<?>>> serializerFactories = new ArrayList<Factory<? extends Serializer<?>>>();
+    List<Factory<? extends Serializer<?>>> serializerFactories = new ArrayList<>();
     addDefaultSerializerFactories(serializerFactories);
     converterFactories.addAll(serializerFactories);
 
-    List<Factory<? extends Deserializer<?>>> deserializerFactories = new ArrayList<Factory<? extends Deserializer<?>>>();
+    List<Factory<? extends Deserializer<?>>> deserializerFactories = new ArrayList<>();
     addDefaultDeserializerFactories(deserializerFactories);
     converterFactories.addAll(deserializerFactories);
 
-    List<ContextualFactory<?>> defaultContextualFactories = new ArrayList<ContextualFactory<?>>();
+    List<ContextualFactory<?>> defaultContextualFactories = new ArrayList<>();
     addDefaultContextualFactories(defaultContextualFactories);
     contextualFactories.addAll(defaultContextualFactories);
 
