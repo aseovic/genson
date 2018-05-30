@@ -1,10 +1,14 @@
 package com.owlike.genson;
 
+import com.owlike.genson.convert.*;
+import com.owlike.genson.reflect.BeanMutatorAccessorResolver;
+import com.owlike.genson.reflect.PropertyNameResolver;
 import org.junit.Test;
 
-import com.owlike.genson.convert.BasicConvertersFactory;
 import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
+
+import java.lang.reflect.Type;
 
 import static org.junit.Assert.*;
 
@@ -36,5 +40,55 @@ public class GensonBuilderTest {
     assertEquals(dummyConverter, genson.provideConverter(Number.class));
     assertEquals(dummyConverter, genson.provideConverter(Long.class));
     assertEquals(dummyConverter, genson.provideConverter(Double.class));
+  }
+
+  @Test
+  public void testChainFactoryVisitor() {
+    Genson genson = new GensonBuilder().with(new InsertingVisitor()).create();
+    String json = genson.serialize("test");
+    assertEquals("\"TEST\"", json);
+    assertEquals("test", genson.deserialize(json, String.class));
+  }
+
+  private static class InsertingVisitor implements ChainedFactoryVisitor {
+    @Override
+    public void visit(ChainedFactory factory) {
+      if (factory instanceof NullConverterFactory) {
+        factory.withNext(new CapitalizingConverter.Factory());
+      }
+    }
+  }
+
+  private static class CapitalizingConverter<T>
+          extends Wrapper<Converter<T>>
+          implements Converter<T> {
+
+    public CapitalizingConverter(Converter<T> wrappedObject) {
+      super(wrappedObject);
+    }
+
+    @Override
+    public void serialize(T object, ObjectWriter writer, Context ctx) throws Exception {
+      if (object instanceof String) {
+        object = (T) ((String) object).toUpperCase();
+      }
+      wrapped.serialize(object, writer, ctx);
+    }
+
+    @Override
+    public T deserialize(ObjectReader reader, Context ctx) throws Exception {
+      T obj = wrapped.deserialize(reader, ctx);
+      if (obj instanceof String) {
+        obj = (T) ((String) obj).toLowerCase();
+      }
+      return obj;
+    }
+
+    static class Factory extends ChainedFactory {
+      @Override
+      protected Converter<?> create(Type type, Genson genson, Converter<?> nextConverter) {
+        return new CapitalizingConverter<>(nextConverter);
+      }
+    }
   }
 }

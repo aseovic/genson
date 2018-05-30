@@ -113,9 +113,13 @@ public abstract class ChainedFactory implements Factory<Converter<?>> {
    * @return the next factory passed as argument
    */
   public final <T extends Factory<? extends Converter<?>>> T withNext(T next) {
-    if (this.next != null)
+    if (next instanceof ChainedFactory) {
+      ((ChainedFactory) next).next = this.next;
+    }
+    else if (this.next != null) {
       throw new IllegalStateException("next factory has already been set for " + getClass()
-        + " you can not override it!");
+              + " you can not override it!");
+    }
     this.next = next;
     return next;
   }
@@ -130,6 +134,13 @@ public abstract class ChainedFactory implements Factory<Converter<?>> {
     }
 
     return f.withNext(next);
+  }
+
+  public void accept(ChainedFactoryVisitor visitor) {
+    visitor.visit(this);
+    if (next instanceof ChainedFactory) {
+      ((ChainedFactory) next).accept(visitor);
+    }
   }
 
   /**
