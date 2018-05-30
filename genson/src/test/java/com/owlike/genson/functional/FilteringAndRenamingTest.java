@@ -5,6 +5,7 @@ import java.util.List;
 import com.owlike.genson.GensonBuilder;
 import com.owlike.genson.annotation.JsonProperty;
 import com.owlike.genson.reflect.BeanMutatorAccessorResolver;
+
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -22,9 +23,8 @@ public class FilteringAndRenamingTest {
 
     Genson genson = new GensonBuilder()
       .exclude(Object.class)
-      .with(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver())
+      .include(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver())
       .create();
-
 
     assertEquals("{\"b\":2}", genson.serialize(value));
 

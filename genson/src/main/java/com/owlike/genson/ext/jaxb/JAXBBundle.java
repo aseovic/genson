@@ -8,8 +8,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +33,6 @@ import com.owlike.genson.convert.DefaultConverters.WrappedRootValueConverter;
 import com.owlike.genson.convert.DefaultConverters.DateConverter;
 import com.owlike.genson.ext.GensonBundle;
 import com.owlike.genson.reflect.*;
-import com.owlike.genson.reflect.PropertyNameResolver.GensonAnnotationPropertyNameResolver;
 import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
 
@@ -63,12 +64,10 @@ public class JAXBBundle extends GensonBundle {
 
   @Override
   public void configure(GensonBuilder builder) {
-    // forcing here the order of GensonAnnotationPropertyResolver and AnnotationPropertyNameResolver allows
-    // us to give them preference over Jaxb annotations. We can not assume it true for any bundle,
-    // as in some cases a bundle might want to have preference over all std Genson components
-    builder.withConverters(new XMLGregorianCalendarConverter(), new DurationConverter())
-      .with(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver(), new JaxbAnnotationPropertyResolver())
-      .with(new GensonAnnotationPropertyNameResolver(), new JaxbNameResolver())
+    builder
+      .withConverters(new XMLGregorianCalendarConverter(), new DurationConverter())
+      .with(new JaxbAnnotationPropertyResolver())
+      .with(new JaxbNameResolver())
       .withConverterFactory(new EnumConverterFactory())
       .withBeanPropertyFactory(new JaxbBeanPropertyFactory())
       .withContextualFactory(new XmlTypeAdapterFactory());
