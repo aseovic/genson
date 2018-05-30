@@ -64,12 +64,10 @@ public class JAXBBundle extends GensonBundle {
 
   @Override
   public void configure(GensonBuilder builder) {
-    // forcing here the order of GensonAnnotationsResolver and AnnotationPropertyNameResolver allows
-    // us to give them preference over Jaxb annotations. We can not assume it true for any bundle,
-    // as in some cases a bundle might want to have preference over all std Genson components
-    builder.withConverters(new XMLGregorianCalendarConverter(), new DurationConveter())
-      .with(new BeanMutatorAccessorResolver.GensonAnnotationsResolver(), new JaxbAnnotationsResolver())
-      .with(new PropertyNameResolver.AnnotationPropertyNameResolver(), new JaxbNameResolver())
+    builder
+      .withConverters(new XMLGregorianCalendarConverter(), new DurationConveter())
+      .with(new JaxbAnnotationsResolver())
+      .with(new JaxbNameResolver())
       .withConverterFactory(new EnumConverterFactory())
       .withBeanPropertyFactory(new JaxbBeanPropertyFactory())
       .withContextualFactory(new XmlTypeAdapterFactory());

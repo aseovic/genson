@@ -54,7 +54,13 @@ public class GensonBuilder {
   private List<GensonBundle> _bundles = new ArrayList<GensonBundle>();
 
   private PropertyNameResolver propertyNameResolver;
+  private List<PropertyNameResolver> propertyNameResolvers = new ArrayList<>();
+  private List<PropertyNameResolver> renamingResolvers = new ArrayList<>();
+
   private BeanMutatorAccessorResolver mutatorAccessorResolver;
+  private List<BeanMutatorAccessorResolver> mutatorAccessorResolvers = new ArrayList<>();
+  private List<BeanMutatorAccessorResolver> propertyFilters = new ArrayList<>();
+
   private VisibilityFilter propertyFilter = VisibilityFilter.PACKAGE_PUBLIC;
   private VisibilityFilter methodFilter = VisibilityFilter.PACKAGE_PUBLIC;
   private VisibilityFilter constructorFilter = VisibilityFilter.PACKAGE_PUBLIC;
@@ -348,14 +354,7 @@ public class GensonBuilder {
    * @return a reference to this builder.
    */
   public GensonBuilder with(BeanMutatorAccessorResolver... resolvers) {
-    if (mutatorAccessorResolver == null)
-      mutatorAccessorResolver = createBeanMutatorAccessorResolver();
-    if (mutatorAccessorResolver instanceof BeanMutatorAccessorResolver.CompositeResolver)
-      ((BeanMutatorAccessorResolver.CompositeResolver) mutatorAccessorResolver).add(resolvers);
-    else
-      throw new IllegalStateException(
-        "You can not add multiple resolvers if the base resolver is not of type "
-          + BeanMutatorAccessorResolver.CompositeResolver.class.getName());
+    mutatorAccessorResolvers.addAll(Arrays.asList(resolvers));
     return this;
   }
 
@@ -379,13 +378,7 @@ public class GensonBuilder {
    * @return a reference to this builder.
    */
   public GensonBuilder with(PropertyNameResolver... resolvers) {
-    if (propertyNameResolver == null) propertyNameResolver = createPropertyNameResolver();
-    if (propertyNameResolver instanceof PropertyNameResolver.CompositePropertyNameResolver)
-      ((PropertyNameResolver.CompositePropertyNameResolver) propertyNameResolver).add(resolvers);
-    else
-      throw new IllegalStateException(
-        "You can not add multiple resolvers if the base resolver is not of type "
-          + PropertyNameResolver.CompositePropertyNameResolver.class.getName());
+    propertyNameResolvers.addAll(Arrays.asList(resolvers));
     return this;
   }
 
@@ -422,7 +415,8 @@ public class GensonBuilder {
    */
   public GensonBuilder rename(final String field, final Class<?> fromClass, final String toName,
                               final Class<?> ofType) {
-    return with(new RenamingPropertyNameResolver(field, fromClass, ofType, toName));
+    renamingResolvers.add(new RenamingPropertyNameResolver(field, fromClass, ofType, toName));
+    return this;
   }
 
   public GensonBuilder exclude(String field) {
@@ -449,6 +443,11 @@ public class GensonBuilder {
     return filter(null, null, fieldOfType, false);
   }
 
+  public GensonBuilder include(BeanMutatorAccessorResolver resolver) {
+    propertyFilters.add(0, resolver);
+    return this;
+  }
+
   public GensonBuilder include(String field, Class<?> fromClass) {
     return filter(field, fromClass, null, false);
   }
@@ -457,9 +456,16 @@ public class GensonBuilder {
     return filter(field, fromClass, ofType, false);
   }
 
+
   private GensonBuilder filter(final String field, final Class<?> declaringClass,
                                final Class<?> ofType, final boolean exclude) {
-    return with(new PropertyFilter(exclude, field, declaringClass, ofType));
+    if (exclude) {
+      propertyFilters.add(new PropertyFilter(exclude, field, declaringClass, ofType));
+    }
+    else {
+      propertyFilters.add(0, new PropertyFilter(exclude, field, declaringClass, ofType));
+    }
+    return this;
   }
 
   /**
@@ -747,9 +753,13 @@ public class GensonBuilder {
    * @return a new instance of Genson built for the current configuration.
    */
   public Genson create() {
-    if (propertyNameResolver == null) propertyNameResolver = createPropertyNameResolver();
-    if (mutatorAccessorResolver == null)
+    if (propertyNameResolver == null) {
+      propertyNameResolver = createPropertyNameResolver();
+    }
+
+    if (mutatorAccessorResolver == null) {
       mutatorAccessorResolver = createBeanMutatorAccessorResolver();
+    }
 
     List<Converter<?>> converters = getDefaultConverters();
     addDefaultSerializers(converters);
@@ -776,7 +786,7 @@ public class GensonBuilder {
     beanDescriptorProvider = createBeanDescriptorProvider();
 
     if (withBeanViewConverter) {
-      List<BeanMutatorAccessorResolver> resolvers = new ArrayList<BeanMutatorAccessorResolver>();
+      List<BeanMutatorAccessorResolver> resolvers = new ArrayList<>();
       resolvers.add(new BeanViewDescriptorProvider.BeanViewMutatorAccessorResolver());
       resolvers.add(mutatorAccessorResolver);
       beanViewDescriptorProvider = new BeanViewDescriptorProvider(
@@ -859,11 +869,19 @@ public class GensonBuilder {
   }
 
   protected BeanMutatorAccessorResolver createBeanMutatorAccessorResolver() {
-    List<BeanMutatorAccessorResolver> resolvers = new ArrayList<BeanMutatorAccessorResolver>();
-    resolvers.add(new BeanMutatorAccessorResolver.GensonAnnotationsResolver());
+    List<BeanMutatorAccessorResolver> resolvers = mutatorAccessorResolvers;
 
-    resolvers.add(new BeanMutatorAccessorResolver.StandardMutaAccessorResolver(propertyFilter,
-      methodFilter, constructorFilter));
+    // we should prefer Genson annotations to any others, so we need to make sure
+    // GensonAnnotationsResolver is the first in the list
+    resolvers.add(0, new BeanMutatorAccessorResolver.GensonAnnotationsResolver());
+
+    // property filters have priority over anything else
+    resolvers.addAll(0, propertyFilters);
+    
+    // however, this one should be used as a very last option, so we'll add it to
+    // the end of the list
+    resolvers.add(new BeanMutatorAccessorResolver.StandardMutaAccessorResolver(
+            propertyFilter,methodFilter, constructorFilter));
 
     return new BeanMutatorAccessorResolver.CompositeResolver(resolvers);
   }
@@ -881,8 +899,17 @@ public class GensonBuilder {
    * {@link #with(PropertyNameResolver...)} method.
    */
   protected PropertyNameResolver createPropertyNameResolver() {
-    List<PropertyNameResolver> resolvers = new ArrayList<PropertyNameResolver>();
-    resolvers.add(new PropertyNameResolver.AnnotationPropertyNameResolver());
+    List<PropertyNameResolver> resolvers = propertyNameResolvers;
+
+    // we should prefer Genson annotations to any others, so we need to make sure
+    // AnnotationPropertyNameResolver is the first in the list
+    resolvers.add(0, new PropertyNameResolver.AnnotationPropertyNameResolver());
+
+    // renaming resolvers have priority over anything else
+    resolvers.addAll(0, renamingResolvers);
+
+    // however, these should be used as a very last option, so we'll add them to
+    // the end of the list
     resolvers.add(new PropertyNameResolver.ConventionalBeanPropertyNameResolver());
     if (withDebugInfoPropertyNameResolver)
       resolvers.add(new ASMCreatorParameterNameResolver(isThrowExceptionOnNoDebugInfo()));
