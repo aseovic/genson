@@ -148,6 +148,14 @@ public class JsonDeserializationTest {
   }
 
   @Test
+  public void testPrimitiveNumbers() {
+    assertEquals(0, genson.deserialize("0", Number.class));
+    assertEquals(Integer.MAX_VALUE, genson.deserialize(String.valueOf(Integer.MAX_VALUE), Number.class));
+    assertEquals(Long.MAX_VALUE, genson.deserialize(String.valueOf(Long.MAX_VALUE), Number.class));
+    assertEquals(Double.MAX_VALUE, genson.deserialize(String.valueOf(Double.MAX_VALUE), Number.class));
+  }
+
+  @Test
   public void testJsonPrimitivesObject() {
     String src = "{\"intPrimitive\":1, \"integerObject\":7, \"doublePrimitive\":1.01,"
       + "\"doubleObject\":2.003,\"text\": \"HEY...YA!\", "

@@ -517,7 +517,13 @@ public final class DefaultConverters {
     public Number deserialize(ObjectReader reader, Context ctx) {
       ValueType vt = reader.getValueType();
       if (ValueType.INTEGER.equals(vt))
-        return reader.valueAsInt();
+        try {
+          return reader.valueAsInt();
+        }
+        catch (NumberFormatException e) {
+          // likely overflowing, let's try a long
+          return reader.valueAsLong();
+        }
       else if (ValueType.DOUBLE.equals(vt))
         return reader.valueAsDouble();
       else {
