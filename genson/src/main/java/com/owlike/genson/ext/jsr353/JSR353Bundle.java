@@ -47,8 +47,8 @@ public class JSR353Bundle extends GensonBundle {
     com.owlike.genson.stream.ValueType.STRING.setDefaultClass(JsonString.class);
     return this;
   }
-  
-  public class JsonValueConverter implements Converter<JsonValue> {
+
+  public static class JsonValueConverter implements Converter<JsonValue> {
 
     @Override
     public void serialize(JsonValue value, ObjectWriter writer, Context ctx) {
@@ -112,7 +112,12 @@ public class JSR353Bundle extends GensonBundle {
 
     public JsonValue deserObject(ObjectReader reader, Context ctx) {
       JsonObjectBuilder builder = factory.createObjectBuilder();
-      reader.beginObject();
+
+      // copy metadata first
+      Map<String, String> metadata = reader.metadata();
+      for (String key : metadata.keySet()) {
+        builder.add('@' + key, metadata.get(key));
+      }
 
       while (reader.hasNext()) {
         com.owlike.genson.stream.ValueType type = reader.next();
