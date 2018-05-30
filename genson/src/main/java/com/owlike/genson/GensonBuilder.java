@@ -867,7 +867,7 @@ public class GensonBuilder {
 
   protected BeanMutatorAccessorResolver createBeanMutatorAccessorResolver() {
     List<BeanMutatorAccessorResolver> resolvers = new ArrayList<BeanMutatorAccessorResolver>();
-    resolvers.add(new BeanMutatorAccessorResolver.GensonAnnotationsResolver());
+    resolvers.add(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver());
 
     resolvers.add(new BeanMutatorAccessorResolver.StandardMutaAccessorResolver(propertyFilter,
       methodFilter, constructorFilter));
@@ -889,7 +889,7 @@ public class GensonBuilder {
    */
   protected PropertyNameResolver createPropertyNameResolver() {
     List<PropertyNameResolver> resolvers = new ArrayList<PropertyNameResolver>();
-    resolvers.add(new PropertyNameResolver.AnnotationPropertyNameResolver());
+    resolvers.add(new PropertyNameResolver.GensonAnnotationPropertyNameResolver());
     resolvers.add(new PropertyNameResolver.ConventionalBeanPropertyNameResolver());
     if (withDebugInfoPropertyNameResolver)
       resolvers.add(new ASMCreatorParameterNameResolver(isThrowExceptionOnNoDebugInfo()));

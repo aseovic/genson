@@ -2,7 +2,6 @@ package com.owlike.genson.ext.jaxb;
 
 import static com.owlike.genson.reflect.TypeUtil.*;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -11,7 +10,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +31,7 @@ import com.owlike.genson.convert.DefaultConverters.WrappedRootValueConverter;
 import com.owlike.genson.convert.DefaultConverters.DateConverter;
 import com.owlike.genson.ext.GensonBundle;
 import com.owlike.genson.reflect.*;
+import com.owlike.genson.reflect.PropertyNameResolver.GensonAnnotationPropertyNameResolver;
 import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
 
@@ -64,12 +63,12 @@ public class JAXBBundle extends GensonBundle {
 
   @Override
   public void configure(GensonBuilder builder) {
-    // forcing here the order of GensonAnnotationsResolver and AnnotationPropertyNameResolver allows
+    // forcing here the order of GensonAnnotationPropertyResolver and AnnotationPropertyNameResolver allows
     // us to give them preference over Jaxb annotations. We can not assume it true for any bundle,
     // as in some cases a bundle might want to have preference over all std Genson components
-    builder.withConverters(new XMLGregorianCalendarConverter(), new DurationConveter())
-      .with(new BeanMutatorAccessorResolver.GensonAnnotationsResolver(), new JaxbAnnotationsResolver())
-      .with(new PropertyNameResolver.AnnotationPropertyNameResolver(), new JaxbNameResolver())
+    builder.withConverters(new XMLGregorianCalendarConverter(), new DurationConverter())
+      .with(new BeanMutatorAccessorResolver.GensonAnnotationPropertyResolver(), new JaxbAnnotationPropertyResolver())
+      .with(new GensonAnnotationPropertyNameResolver(), new JaxbNameResolver())
       .withConverterFactory(new EnumConverterFactory())
       .withBeanPropertyFactory(new JaxbBeanPropertyFactory())
       .withContextualFactory(new XmlTypeAdapterFactory());
@@ -83,7 +82,8 @@ public class JAXBBundle extends GensonBundle {
 
           if (ann != null) {
             String name = "##default".equals(ann.name()) ? firstCharToLower(clazz.getSimpleName()) : ann.name();
-            return new WrappedRootValueConverter<Object>(name, name, (Converter<Object>) nextConverter);
+            //noinspection unchecked
+            return new WrappedRootValueConverter<>(name, name, (Converter<Object>) nextConverter);
           }
           return null;
         }
@@ -91,10 +91,10 @@ public class JAXBBundle extends GensonBundle {
   }
 
   private String firstCharToLower(String str) {
-    return Character.toLowerCase(str.charAt(0)) + (str.length() > 0 ? str.substring(1) : "");
+    return Character.toLowerCase(str.charAt(0)) + str.substring(1);
   }
 
-  private class DurationConveter implements Converter<Duration> {
+  private class DurationConverter implements Converter<Duration> {
     @Override
     public void serialize(Duration object, ObjectWriter writer, Context ctx) {
       writer.writeValue(object.toString());
@@ -169,11 +169,9 @@ public class JAXBBundle extends GensonBundle {
           // we also need to find a converter for the adapted type
           Converter<Object> adaptedTypeConverter = genson.provideConverter(
             xmlElementType != null ? xmlElementType : adaptedType);
+          //noinspection unchecked
           converter = new AdaptedConverter(adapter, adaptedTypeConverter);
-        } catch (InstantiationException e) {
-          throw new JsonBindingException(
-            "Could not instantiate XmlAdapter of type " + adapterClass, e);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
           throw new JsonBindingException(
             "Could not instantiate XmlAdapter of type " + adapterClass, e);
         }
@@ -204,7 +202,7 @@ public class JAXBBundle extends GensonBundle {
 
       @Override
       public void serialize(Object object, ObjectWriter writer, Context ctx) throws Exception {
-        Object adaptedValue = null;
+        Object adaptedValue;
         try {
           adaptedValue = adapter.marshal(object);
         } catch (Exception e) {
@@ -226,8 +224,8 @@ public class JAXBBundle extends GensonBundle {
         Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>) rawClass;
 
         try {
-          Map<String, Enum<?>> valueToEnum = new HashMap<String, Enum<?>>();
-          Map<Enum<?>, String> enumToValue = new HashMap<Enum<?>, String>();
+          Map<String, Enum<?>> valueToEnum = new HashMap<>();
+          Map<Enum<?>, String> enumToValue = new HashMap<>();
           for (Enum<?> enumConstant : enumClass.getEnumConstants()) {
             XmlEnumValue ann = rawClass.getField(enumConstant.name()).getAnnotation(
               XmlEnumValue.class);
@@ -245,7 +243,7 @@ public class JAXBBundle extends GensonBundle {
         } catch (SecurityException e) {
           throw new JsonBindingException("Unable to introspect enum "
             + enumClass, e);
-        } catch (NoSuchFieldException e) {
+        } catch (NoSuchFieldException ignored) {
         }
       }
 
@@ -281,7 +279,7 @@ public class JAXBBundle extends GensonBundle {
 
     @Override
     public PropertyAccessor createAccessor(String name, Field field, Type ofType, Genson genson) {
-      Type newType = getType(field, field.getGenericType(), ofType);
+      Type newType = getType(field, field.getGenericType());
       if (newType != null) {
         return new PropertyAccessor.FieldAccessor(name, field, newType, getRawClass(ofType));
       }
@@ -292,7 +290,7 @@ public class JAXBBundle extends GensonBundle {
     @Override
     public PropertyAccessor createAccessor(String name, Method method, Type ofType,
                                            Genson genson) {
-      Type newType = getType(method, method.getReturnType(), ofType);
+      Type newType = getType(method, method.getReturnType());
       if (newType != null) {
         return new PropertyAccessor.MethodAccessor(name, method, newType,
           getRawClass(ofType));
@@ -302,7 +300,7 @@ public class JAXBBundle extends GensonBundle {
 
     @Override
     public PropertyMutator createMutator(String name, Field field, Type ofType, Genson genson) {
-      Type newType = getType(field, field.getGenericType(), ofType);
+      Type newType = getType(field, field.getGenericType());
       if (newType != null) {
         return new PropertyMutator.FieldMutator(name, field, newType, getRawClass(ofType));
       }
@@ -313,7 +311,7 @@ public class JAXBBundle extends GensonBundle {
     @Override
     public PropertyMutator createMutator(String name, Method method, Type ofType, Genson genson) {
       if (method.getParameterTypes().length == 1) {
-        Type newType = getType(method, method.getReturnType(), ofType);
+        Type newType = getType(method, method.getReturnType());
         if (newType != null) {
           return new PropertyMutator.MethodMutator(name, method, newType,
             getRawClass(ofType));
@@ -334,7 +332,7 @@ public class JAXBBundle extends GensonBundle {
       return null;
     }
 
-    private Type getType(AccessibleObject object, Type objectType, Type contextType) {
+    private Type getType(AccessibleObject object, Type objectType) {
       XmlElement el = object.getAnnotation(XmlElement.class);
       if (el != null && el.type() != XmlElement.DEFAULT.class) {
         if (!TypeUtil.getRawClass(objectType).isAssignableFrom(el.type())) {
@@ -349,7 +347,7 @@ public class JAXBBundle extends GensonBundle {
     }
   }
 
-  private class JaxbNameResolver implements PropertyNameResolver {
+  private static class JaxbNameResolver implements PropertyNameResolver {
     private final static String DEFAULT_NAME = "##default";
 
     @Override
@@ -385,36 +383,33 @@ public class JAXBBundle extends GensonBundle {
     }
   }
 
-  private class JaxbAnnotationsResolver extends BeanMutatorAccessorResolver.PropertyBaseResolver {
+  private static class JaxbAnnotationPropertyResolver extends BeanMutatorAccessorResolver.AnnotationPropertyResolver {
+
+    public JaxbAnnotationPropertyResolver() {
+      super(XmlAttribute.class, XmlTransient.class, null);
+    }
+
     @Override
-    public Trilean isAccessor(Field field, Class<?> fromClass) {
-      if (ignore(field, field.getType(), fromClass)) return Trilean.FALSE;
-      if (include(field, field.getType(), fromClass)) return Trilean.TRUE;
-      return shouldResolveField(field, fromClass);
+    public Trilean isAccessor(final Field field, final Class<?> fromClass) {
+      final Trilean result = super.isAccessor(field, fromClass);
+      return ((result != Trilean.UNKNOWN) ? result : shouldResolveField(field, fromClass));
     }
 
     @Override
     public Trilean isMutator(Field field, Class<?> fromClass) {
-      if (ignore(field, field.getType(), fromClass)) return Trilean.FALSE;
-      if (include(field, field.getType(), fromClass)) return Trilean.TRUE;
-      return shouldResolveField(field, fromClass);
+      final Trilean result = super.isMutator(field, fromClass);
+      return ((result != Trilean.UNKNOWN) ? result : shouldResolveField(field, fromClass));
     }
 
     @Override
     public Trilean isAccessor(Method method, Class<?> fromClass) {
-      if (ignore(method, method.getReturnType(), fromClass)) return Trilean.FALSE;
+      if (ignore(method, method.getReturnType(), true)) return Trilean.FALSE;
 
-      String name = null;
-      if (method.getName().startsWith("get") && method.getName().length() > 3)
-        name = method.getName().substring(3);
-      else if (method.getName().startsWith("is") && method.getName().length() > 2
-        && method.getReturnType() == boolean.class
-        || method.getReturnType() == Boolean.class)
-        name = method.getName().substring(2);
+      String name = getGetterName(method);
 
       if (name != null) {
-        if (include(method, method.getReturnType(), fromClass)) return Trilean.TRUE;
-        if (find(XmlTransient.class, fromClass, "set" + name, method.getReturnType()) != null)
+        if (include(method, method.getReturnType(), true)) return Trilean.TRUE;
+        if (find(exclusionAnnotation, fromClass, "set" + name, method.getReturnType()) != null)
           return Trilean.FALSE;
 
 
@@ -428,17 +423,16 @@ public class JAXBBundle extends GensonBundle {
     public Trilean isMutator(Method method, Class<?> fromClass) {
       Class<?> paramClass = method.getParameterTypes().length == 1 ? method
         .getParameterTypes()[0] : Object.class;
-      if (ignore(method, paramClass, fromClass)) return Trilean.FALSE;
+      if (ignore(method, paramClass, false)) return Trilean.FALSE;
 
-      if (method.getName().startsWith("set") && method.getName().length() > 3) {
-        if (include(method, method.getReturnType(), fromClass)) return Trilean.TRUE;
-
-        String name = method.getName().substring(3);
+      String name = getSetterName(method);
+      if (name != null) {
+        if (include(method, method.getReturnType(), false)) return Trilean.TRUE;
 
         // Exclude it if there is a corresponding accessor annotated with XmlTransient
-        if (find(XmlTransient.class, fromClass, "get" + name) != null) return Trilean.FALSE;
+        if (find(exclusionAnnotation, fromClass, "get" + name) != null) return Trilean.FALSE;
         if (paramClass.equals(boolean.class) || paramClass.equals(Boolean.class)) {
-          if (find(XmlTransient.class, fromClass, "is" + name) != null)
+          if (find(exclusionAnnotation, fromClass, "is" + name) != null)
             return Trilean.FALSE;
         }
 
@@ -447,6 +441,11 @@ public class JAXBBundle extends GensonBundle {
       }
 
       return Trilean.FALSE;
+    }
+
+    @Override
+    protected boolean include(final AccessibleObject property, final Class<?> ofType, boolean forSerialization) {
+      return (super.include(property, ofType, forSerialization) || find(XmlElement.class, property, ofType) != null);
     }
 
     private Trilean shouldResolveField(Field field, Class<?> fromClass) {
@@ -469,68 +468,21 @@ public class JAXBBundle extends GensonBundle {
       }
     }
 
-    private boolean isDefaultVisibilityMember(Member m, XmlAccessorType xmlAccessTypeAnn) {
+    private static boolean isDefaultVisibilityMember(Member m, XmlAccessorType xmlAccessTypeAnn) {
       return xmlAccessTypeAnn == null && VisibilityFilter.PACKAGE_PUBLIC.isVisible(m);
     }
 
-    private boolean isValidFieldMember(Member m, XmlAccessorType ann) {
+    private static boolean isValidFieldMember(Member m, XmlAccessorType ann) {
       return ann != null && ann.value() == XmlAccessType.FIELD && VisibilityFilter.PRIVATE.isVisible(m);
     }
 
-    private boolean isValidPublicMember(Member m, XmlAccessorType ann) {
+    private static boolean isValidPublicMember(Member m, XmlAccessorType ann) {
       return ann != null && ann.value() == XmlAccessType.PUBLIC_MEMBER && VisibilityFilter.PACKAGE_PUBLIC.isVisible(m);
     }
 
-    private boolean isValidPropertyMember(Member m, XmlAccessorType ann) {
+    private static boolean isValidPropertyMember(Member m, XmlAccessorType ann) {
       return ann != null && ann.value() == XmlAccessType.PROPERTY && VisibilityFilter.PACKAGE_PUBLIC.isVisible(m);
     }
-
-    private boolean ignore(AccessibleObject property, Class<?> ofType, Class<?> fromClass) {
-      XmlTransient xmlTransientAnn = find(XmlTransient.class, property, ofType);
-      if (xmlTransientAnn != null) return true;
-
-      return false;
-    }
-
-    private boolean include(AccessibleObject property, Class<?> ofType, Class<?> fromClass) {
-      if (find(XmlAttribute.class, property, ofType) != null
-        || find(XmlElement.class, property, ofType) != null) return true;
-
-      return false;
-    }
   }
 
-  private <A extends Annotation> A find(Class<A> annotation, AccessibleObject onObject,
-                                        Class<?> onClass) {
-    A ann = onObject.getAnnotation(annotation);
-    if (ann != null) return ann;
-    return find(annotation, onClass);
-  }
-
-  private <A extends Annotation> A find(Class<A> annotation, Class<?> onClass) {
-    A ann = onClass.getAnnotation(annotation);
-    if (ann == null && onClass.getPackage() != null)
-      ann = onClass.getPackage().getAnnotation(annotation);
-    return ann;
-  }
-
-  private <A extends Annotation> A find(Class<A> annotation, Class<?> inClass, String methodName,
-                                        Class<?>... parameterTypes) {
-    A ann = null;
-    for (Class<?> clazz = inClass; clazz != null; clazz = clazz.getSuperclass()) {
-      try {
-        for (Method m : clazz.getDeclaredMethods())
-          if (m.getName().equals(methodName)
-            && Arrays.equals(m.getParameterTypes(), parameterTypes))
-            if (m.isAnnotationPresent(annotation))
-              return m.getAnnotation(annotation);
-            else
-              break;
-
-      } catch (SecurityException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    return ann;
-  }
 }
