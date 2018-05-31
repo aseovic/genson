@@ -73,7 +73,7 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
   }
 
   public void serialize(T obj, ObjectWriter writer, Context ctx) throws Exception {
-    if (obj != null && !isJsonValueConverter(wrapped) &&
+    if (obj != null && !isDefaultObjectType(obj) && !isJsonValueConverter(wrapped) &&
       (classMetadataWithStaticType || !tClass.equals(obj.getClass()))) {
       writer.beginNextObjectMetadata()
         .writeMetadata("class", ctx.genson.aliasFor(obj.getClass()));
@@ -98,6 +98,10 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
       }
     }
     return wrapped.deserialize(reader, ctx);
+  }
+
+  private boolean isDefaultObjectType(T obj) {
+    return obj.getClass().equals(ValueType.OBJECT.toClass());
   }
 
   private boolean isJsonValueConverter(Converter<T> converter) {
