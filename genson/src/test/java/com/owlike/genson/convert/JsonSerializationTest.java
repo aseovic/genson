@@ -117,4 +117,30 @@ public class JsonSerializationTest {
       return name + age;
     }
   }
+
+  @Test
+  public void testSerializeNestedPolymorphicType() {
+    String expected = "{\"pet\":{\"breed\":\"Boxer\",\"name\":\"Fido\"}}";
+
+    Dog dog = new Dog();
+    dog.name = "Fido";
+    dog.breed = "Boxer";
+
+    Person p = new Person();
+    p.pet = dog;
+
+    assertEquals(expected, genson.serialize(p));
+  }
+
+  private static class Pet {
+    public String name;
+  }
+
+  private static class Dog extends Pet{
+    public String breed;
+  }
+
+  private static class Person {
+    public Pet pet;
+  }
 }

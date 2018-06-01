@@ -337,13 +337,16 @@ public class JAXBBundle extends GensonBundle {
     private Type getType(AccessibleObject object, Type objectType, Type contextType) {
       XmlElement el = object.getAnnotation(XmlElement.class);
       if (el != null && el.type() != XmlElement.DEFAULT.class) {
-        if (!TypeUtil.getRawClass(objectType).isAssignableFrom(el.type())) {
+        if (TypeUtil.getRawClass(objectType).isAssignableFrom(el.type())) {
+          return el.type();
+        }
+        else {
           XmlJavaTypeAdapter ad = object.getAnnotation(XmlJavaTypeAdapter.class);
           if (ad == null) 
-            throw new ClassCastException("Inavlid XmlElement annotation, " + objectType
+            throw new ClassCastException("Invalid XmlElement annotation, " + objectType
               + " is not assignable from " + el.type());
+          return objectType;
         }
-        return el.type();
       } else
         return null;
     }
