@@ -80,11 +80,16 @@ public class FactoryTest {
   }
 
   @Test
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public void testUnwrapAnnotations() throws Exception {
     Genson genson = new GensonBuilder().withConverters(new ClassMetadataConverter()).create();
-    @SuppressWarnings({"unchecked", "rawtypes"}) // argh its ugly with those warnings...
-      Wrapper<Converter<A>> wrapper = (Wrapper) genson.provideConverter(A.class);
+
+    Wrapper<Converter<A>> wrapper = (Wrapper) genson.provideConverter(A.class);
     Converter<A> converter = wrapper.unwrap();
+    while (converter instanceof Wrapper) {
+      converter = (Converter<A>) ((Wrapper) converter).unwrap();
+    }
+
     assertTrue(converter instanceof ClassMetadataConverter);
     assertFalse(ClassMetadataConverter.used);
     converter.serialize(new A(), null, null);

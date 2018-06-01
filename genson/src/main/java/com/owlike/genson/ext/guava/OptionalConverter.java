@@ -8,7 +8,6 @@ import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
 import com.owlike.genson.stream.ValueType;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 
 @HandleNull
@@ -17,7 +16,9 @@ public class OptionalConverter<T> implements Converter<Optional<T>> {
 
     @Override
     public Converter<Optional<Object>> create(Type type, Genson genson) {
-      Type typeOfValue = TypeUtil.typeOf(0, type);
+      Type typeOfValue = type.equals(Optional.absent().getClass())
+              ? Object.class
+              : TypeUtil.typeOf(0, type);
 
       return new OptionalConverter<Object>(genson.provideConverter(typeOfValue));
     }

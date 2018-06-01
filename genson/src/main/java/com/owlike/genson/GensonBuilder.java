@@ -865,10 +865,8 @@ public class GensonBuilder {
     ChainedFactory chainHead = new CircularClassReferenceConverterFactory();
 
     chainHead.append(new NullConverterFactory(failOnNullPrimitive));
-
-    if (useRuntimeTypeForSerialization) chainHead.append(new RuntimeTypeConverter.RuntimeTypeConverterFactory());
-
     chainHead.append(new ClassMetadataConverter.ClassMetadataConverterFactory(classMetadataWithStaticType));
+    chainHead.append(new RuntimeTypeConverter.RuntimeTypeConverterFactory());
 
     if (customFactoryChain != null) chainHead.append(customFactoryChain);
 
