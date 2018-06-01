@@ -951,6 +951,9 @@ public class GensonBuilder {
     converters.add(DefaultConverters.BigIntegerConverter.instance);
     converters.add(DefaultConverters.UUIDConverter.instance);
     converters.add(DefaultConverters.FileConverter.instance);
+    converters.add(DefaultConverters.OptionalIntConverter.instance);
+    converters.add(DefaultConverters.OptionalLongConverter.instance);
+    converters.add(DefaultConverters.OptionalDoubleConverter.instance);
     return converters;
   }
 
@@ -969,6 +972,7 @@ public class GensonBuilder {
     factories.add(new DefaultConverters.CalendarConverterFactory(
       new DefaultConverters.DateConverter(dateFormat, useDateAsTimestamp)
     ));
+    factories.add(DefaultConverters.OptionalConverterFactory.instance);
   }
 
   protected void addDefaultContextualFactories(List<ContextualFactory<?>> factories) {
