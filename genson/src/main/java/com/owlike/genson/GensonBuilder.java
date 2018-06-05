@@ -78,7 +78,7 @@ public class GensonBuilder {
   private final Map<Class<?>, BeanView<?>> registeredViews = new HashMap<Class<?>, BeanView<?>>();
 
   private ChainedFactory customFactoryChain;
-  private ChainedFactoryVisitor chainedFactoryVisitor;
+  private Modifier<ChainedFactory> chainedFactoryModifier;
 
   private final Map<Class<?>, Object> defaultValues = new HashMap<Class<?>, Object>();
   private boolean failOnNullPrimitive = false;
@@ -282,8 +282,8 @@ public class GensonBuilder {
     return this;
   }
 
-  public GensonBuilder with(ChainedFactoryVisitor visitor) {
-    chainedFactoryVisitor = visitor;
+  public GensonBuilder withConverterFactory(Modifier<ChainedFactory> modifier) {
+    chainedFactoryModifier = modifier;
     return this;
   }
 
@@ -838,8 +838,8 @@ public class GensonBuilder {
    */
   protected Genson create(Factory<Converter<?>> converterFactory,
                           Map<String, Class<?>> classAliases) {
-    if (chainedFactoryVisitor != null && converterFactory instanceof ChainedFactory) {
-      ((ChainedFactory) converterFactory).accept(chainedFactoryVisitor);
+    if (chainedFactoryModifier != null && converterFactory instanceof ChainedFactory) {
+        chainedFactoryModifier.apply((ChainedFactory) converterFactory);
     }
 
     return new Genson(converterFactory, getBeanDescriptorProvider(),

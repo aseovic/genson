@@ -68,7 +68,7 @@ import com.owlike.genson.Genson;
  * allows to merge class information of current implementation and the wrapped one.
  *
  * @author eugen
- * @see com.owlike.genson.convert.NullConverter NullConverter
+ * @see com.owlike.genson.convert.NullConverterFactory NullConverterFactory
  * @see com.owlike.genson.convert.BasicConvertersFactory BasicConvertersFactory
  * @see com.owlike.genson.Wrapper Wrapper
  */
@@ -126,7 +126,7 @@ public abstract class ChainedFactory implements Factory<Converter<?>> {
 
   public final <T extends Factory<? extends Converter<?>>> T append(T next) {
     ChainedFactory f = this;
-    while(f.next() != null) {
+    while (f.next() != null) {
       if (!(f.next() instanceof ChainedFactory)) {
         throw new UnsupportedOperationException("Last element in the chain is not a ChainedFactory");
       }
@@ -136,10 +136,18 @@ public abstract class ChainedFactory implements Factory<Converter<?>> {
     return f.withNext(next);
   }
 
-  public void accept(ChainedFactoryVisitor visitor) {
-    visitor.visit(this);
-    if (next instanceof ChainedFactory) {
-      ((ChainedFactory) next).accept(visitor);
+  public ChainedFactory find(Class<? extends ChainedFactory> clazz) {
+    ChainedFactory f = this;
+    while (true) {
+      if (f.getClass().equals(clazz)) {
+        return f;
+      }
+      if (f.next() instanceof ChainedFactory) {
+        f = (ChainedFactory) f.next();
+      }
+      else {
+        return null;
+      }
     }
   }
 
