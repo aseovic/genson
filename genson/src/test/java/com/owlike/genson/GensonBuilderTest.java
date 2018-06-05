@@ -1,8 +1,6 @@
 package com.owlike.genson;
 
 import com.owlike.genson.convert.*;
-import com.owlike.genson.reflect.BeanMutatorAccessorResolver;
-import com.owlike.genson.reflect.PropertyNameResolver;
 import org.junit.Test;
 
 import com.owlike.genson.stream.ObjectReader;
@@ -44,19 +42,15 @@ public class GensonBuilderTest {
 
   @Test
   public void testChainFactoryVisitor() {
-    Genson genson = new GensonBuilder().with(new InsertingVisitor()).create();
+    Genson genson = new GensonBuilder()
+            .withConverterFactory(factory ->
+                    factory.find(NullConverterFactory.class)
+                            .withNext(new CapitalizingConverter.Factory()))
+            .create();
+
     String json = genson.serialize("test");
     assertEquals("\"TEST\"", json);
     assertEquals("test", genson.deserialize(json, String.class));
-  }
-
-  private static class InsertingVisitor implements ChainedFactoryVisitor {
-    @Override
-    public void visit(ChainedFactory factory) {
-      if (factory instanceof NullConverterFactory) {
-        factory.withNext(new CapitalizingConverter.Factory());
-      }
-    }
   }
 
   private static class CapitalizingConverter<T>
