@@ -10,6 +10,8 @@ import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
 import com.owlike.genson.stream.ValueType;
 
+import javax.json.JsonValue;
+
 /**
  * Converter responsible of writing and reading @class metadata. This is useful if you want to be
  * able to deserialize all serialized objects without knowing their concrete type. Metadata is
@@ -73,7 +75,7 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
   }
 
   public void serialize(T obj, ObjectWriter writer, Context ctx) throws Exception {
-    if (obj != null && !isDefaultObjectType(obj) && !isJsonValueConverter(wrapped) &&
+    if (obj != null && !isDefaultObjectType(obj) && !isJsonValue(obj.getClass()) &&
       (classMetadataWithStaticType || !tClass.equals(obj.getClass()))) {
       writer.beginNextObjectMetadata()
         .writeMetadata("class", ctx.genson.aliasFor(obj.getClass()));
@@ -82,7 +84,7 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
   }
 
   public T deserialize(ObjectReader reader, Context ctx) throws Exception {
-    if (ValueType.OBJECT.equals(reader.getValueType()) && !isJsonValueConverter(wrapped)) {
+    if (ValueType.OBJECT.equals(reader.getValueType()) && !isJsonValue(tClass)) {
       String className = reader.nextObjectMetadata().metadata("class");
       if (className != null) {
         try {
@@ -103,8 +105,7 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
   private boolean isDefaultObjectType(T obj) {
     return obj.getClass().equals(ValueType.OBJECT.toClass());
   }
-
-  private boolean isJsonValueConverter(Converter<T> converter) {
-    return converter instanceof JSR353Bundle.JsonValueConverter;
+  private boolean isJsonValue(Class<?> clazz) {
+    return JsonValue.class.isAssignableFrom(clazz);
   }
 }
