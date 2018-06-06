@@ -4,7 +4,6 @@ import java.lang.reflect.Type;
 
 import com.owlike.genson.*;
 import com.owlike.genson.annotation.HandleClassMetadata;
-import com.owlike.genson.ext.jsr353.JSR353Bundle;
 import com.owlike.genson.reflect.TypeUtil;
 import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
@@ -75,7 +74,7 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
   }
 
   public void serialize(T obj, ObjectWriter writer, Context ctx) throws Exception {
-    if (obj != null && !isDefaultObjectType(obj) && !isJsonValue(obj.getClass()) &&
+    if (obj != null && !isDefaultObjectType(obj, ctx) && !isJsonValue(obj.getClass()) &&
       (classMetadataWithStaticType || !tClass.equals(obj.getClass()))) {
       writer.beginNextObjectMetadata()
         .writeMetadata("class", ctx.genson.aliasFor(obj.getClass()));
@@ -102,9 +101,10 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
     return wrapped.deserialize(reader, ctx);
   }
 
-  private boolean isDefaultObjectType(T obj) {
-    return obj.getClass().equals(ValueType.OBJECT.toClass());
+  private boolean isDefaultObjectType(T obj, Context ctx) {
+    return obj.getClass().equals(ctx.genson.defaultClass(ValueType.OBJECT));
   }
+
   private boolean isJsonValue(Class<?> clazz) {
     return JsonValue.class.isAssignableFrom(clazz);
   }
