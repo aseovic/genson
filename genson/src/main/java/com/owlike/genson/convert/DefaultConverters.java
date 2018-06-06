@@ -1331,4 +1331,147 @@ public final class DefaultConverters {
       return value;
     }
   }
+
+  public static class OptionalConverterFactory implements Factory<Converter<Optional<?>>> {
+    public static final OptionalConverterFactory instance = new OptionalConverterFactory();
+    private OptionalConverterFactory() {
+    }
+
+    @Override
+    public Converter<Optional<?>> create(final Type type, final Genson genson) {
+      Type optionalType = typeOf(0, type);
+      //noinspection unchecked
+      return new OptionalConverter(genson.provideConverter(optionalType));
+    }
+  }
+
+  public static class OptionalConverter<T> implements Converter<Optional<T>> {
+
+    private Converter<T> converter;
+
+    public OptionalConverter(Converter<T> converter) {
+      this.converter = converter;
+    }
+
+    @Override
+    public void serialize(final Optional<T> optional, final ObjectWriter writer, final Context ctx) throws Exception {
+      writer.beginObject();
+      if (optional.isPresent()) {
+        writer.writeName("value");
+        converter.serialize(optional.get(), writer, ctx);
+      }
+      writer.endObject();
+    }
+
+    @Override
+    public Optional<T> deserialize(final ObjectReader reader, final Context ctx) throws Exception {
+      reader.beginObject();
+      try {
+        while (reader.hasNext()) {
+          reader.next();
+          if ("value".equals(reader.name())) {
+            return Optional.of(converter.deserialize(reader, ctx));
+          }
+        }
+        return Optional.empty();
+      } finally {
+        reader.endObject();
+      }
+    }
+  }
+
+  public static class OptionalIntConverter implements Converter<OptionalInt> {
+    public final static OptionalIntConverter instance = new OptionalIntConverter();
+
+    private OptionalIntConverter() {
+    }
+
+    @Override
+    public void serialize(final OptionalInt optional, final ObjectWriter writer, final Context ctx) throws Exception {
+      writer.beginObject();
+      if (optional.isPresent()) {
+        writer.writeName("value").writeValue(optional.getAsInt());
+      }
+      writer.endObject();
+    }
+
+    @Override
+    public OptionalInt deserialize(final ObjectReader reader, final Context ctx) throws Exception {
+      reader.beginObject();
+      try {
+        while (reader.hasNext()) {
+          reader.next();
+          if ("value".equals(reader.name())) {
+            return OptionalInt.of(reader.valueAsInt());
+          }
+        }
+        return OptionalInt.empty();
+      } finally {
+        reader.endObject();
+      }
+    }
+  }
+
+  public static class OptionalLongConverter implements Converter<OptionalLong> {
+    public final static OptionalLongConverter instance = new OptionalLongConverter();
+
+    private OptionalLongConverter() {
+    }
+
+    @Override
+    public void serialize(final OptionalLong optional, final ObjectWriter writer, final Context ctx) throws Exception {
+      writer.beginObject();
+      if (optional.isPresent()) {
+        writer.writeName("value").writeValue(optional.getAsLong());
+      }
+      writer.endObject();
+    }
+
+    public OptionalLong deserialize(final ObjectReader reader, final Context ctx) throws Exception {
+      reader.beginObject();
+      try {
+        while (reader.hasNext()) {
+          reader.next();
+          if ("value".equals(reader.name())) {
+            return OptionalLong.of(reader.valueAsLong());
+          }
+        }
+        return OptionalLong.empty();
+      } finally {
+        reader.endObject();
+      }
+    }
+  }
+
+  public static class OptionalDoubleConverter implements Converter<OptionalDouble> {
+    public final static OptionalDoubleConverter instance = new OptionalDoubleConverter();
+
+    private OptionalDoubleConverter() {
+    }
+
+    @Override
+    public void serialize(final OptionalDouble optional, final ObjectWriter writer, final Context ctx) throws Exception {
+      writer.beginObject();
+      if (optional.isPresent()) {
+        writer.writeName("value").writeValue(optional.getAsDouble());
+      }
+      writer.endObject();
+    }
+
+    @Override
+    public OptionalDouble deserialize(final ObjectReader reader, final Context ctx) throws Exception {
+      reader.beginObject();
+      try {
+        while (reader.hasNext()) {
+          reader.next();
+          if ("value".equals(reader.name())) {
+            return OptionalDouble.of(reader.valueAsLong());
+          }
+        }
+        return OptionalDouble.empty();
+      } finally {
+        reader.endObject();
+      }
+    }
+  }
 }

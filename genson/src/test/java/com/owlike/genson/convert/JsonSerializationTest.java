@@ -2,6 +2,10 @@ package com.owlike.genson.convert;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import com.owlike.genson.GensonBuilder;
 import org.junit.Test;
@@ -89,6 +93,44 @@ public class JsonSerializationTest {
   @Test
   public void testSerializeBoxedFloat() {
     assertEquals("2.0", genson.serialize(new Float(2)));
+  }
+
+  @Test
+  public void testSerializeOptional() {
+    assertEquals("{}", genson.serialize(Optional.empty()));
+    assertEquals("{}", genson.serialize(Optional.ofNullable(null)));
+    assertEquals("{\"value\":\"string\"}", genson.serialize(Optional.of("string")));
+    assertEquals("{\"value\":42}", genson.serialize(Optional.of(42L)));
+    assertEquals("{\"value\":42.35}", genson.serialize(Optional.of(42.35D)));
+    assertEquals("{\"value\":true}", genson.serialize(Optional.of(true)));
+    assertEquals("{\"value\":false}", genson.serialize(Optional.of(false)));
+
+    assertEquals("{\"value\":{\"age\":111,\"name\":\"Bilbo Baggins\",\"noField\":\"Bilbo Baggins111\"}}",
+                 genson.serialize(Optional.of(new ClassWithFieldsAndGetter("Bilbo Baggins", 111))));
+  }
+
+  @Test
+  public void testSerializeOptionalInt() {
+    assertEquals("{}",
+        genson.serialize(OptionalInt.empty()));
+    assertEquals("{\"value\":42}",
+        genson.serialize(OptionalInt.of(42)));
+  }
+
+  @Test
+  public void testSerializeOptionalLong() {
+    assertEquals("{}",
+        genson.serialize(OptionalLong.empty()));
+    assertEquals("{\"value\":42}",
+        genson.serialize(OptionalLong.of(42L)));
+  }
+
+  @Test
+  public void testSerializeOptionalDouble() {
+    assertEquals("{}",
+        genson.serialize(OptionalDouble.empty()));
+    assertEquals("{\"value\":42.0}",
+        genson.serialize(OptionalDouble.of(42D)));
   }
 
   private Primitives createPrimitives() {

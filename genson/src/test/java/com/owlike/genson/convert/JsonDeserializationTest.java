@@ -349,6 +349,95 @@ public class JsonDeserializationTest {
     assertEquals("foo", pojo.str);
   }
 
+  @Test
+  public void testDeserializationOptional() {
+    assertFalse(genson.deserialize("{}", Optional.class).isPresent());
+    assertEquals(Optional.of("string"), genson.deserialize("{\"value\":\"string\"}", Optional.class));
+    assertEquals(Optional.of(42L), genson.deserialize("{\"value\":42}", Optional.class));
+    assertEquals(Optional.of(42.35D), genson.deserialize("{\"value\":42.35}", Optional.class));
+    assertEquals(Optional.of(true), genson.deserialize("{\"value\":true}", Optional.class));
+    assertEquals(Optional.of(false), genson.deserialize("{\"value\":false}", Optional.class));
+
+    Genson genson = new GensonBuilder().useClassMetadata(true).create();
+    assertEquals(Optional.of(new BeanWithConstructor("Bilbo Baggins", 111, null)),
+                 genson.deserialize("{\"@class\":\"java.util.Optional\",\"value\":{\"@class\":\"com.owlike.genson.convert.JsonDeserializationTest$BeanWithConstructor\",\"age\":111,\"name\":\"Bilbo Baggins\",\"other\":null}}", Optional.class));
+  }
+  
+  @Test
+  public void testDeserializationOptionalInt() {
+    assertFalse(genson.deserialize("{}", OptionalInt.class).isPresent());
+    assertEquals(OptionalInt.of(42),
+        genson.deserialize("{\"value\":42}", OptionalInt.class));
+  }
+
+  @Test
+  public void testDeserializationOptionalLong() {
+    assertFalse(genson.deserialize("{}", OptionalLong.class).isPresent());
+    assertEquals(OptionalLong.of(42L),
+        genson.deserialize("{\"value\":42}", OptionalLong.class));
+  }
+
+  @Test
+  public void testDeserializationOptionalDouble() {
+    assertFalse(genson.deserialize("{}", OptionalDouble.class).isPresent());
+    assertEquals(OptionalDouble.of(42D),
+        genson.deserialize("{\"value\":42.0}", OptionalDouble.class));
+  }
+
+  @Test
+  public void testDeserializationOfBeanWithOptionals() {
+    BeanWithOptionals expected = new BeanWithOptionals(Optional.of("Hello World"),
+        OptionalInt.of(42),
+        OptionalLong.of(42L),
+        OptionalDouble.of(42D));
+
+    BeanWithOptionals result = genson.deserialize(
+        "{\"optionalDouble\":{\"value\":42.0},\"optionalInt\":{\"value\":42},\"optionalLong\":{\"value\":42},\"optionalType\":{\"value\":\"Hello World\"}}",
+        BeanWithOptionals.class);
+    assertEquals(expected, result);
+  }
+
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  public static class BeanWithOptionals {
+    @JsonProperty
+    private Optional<String> optionalType;
+    @JsonProperty
+    private OptionalInt optionalInt;
+    @JsonProperty
+    private OptionalLong optionalLong;
+    @JsonProperty
+    private OptionalDouble optionalDouble;
+
+    @SuppressWarnings("unused")
+    public BeanWithOptionals() {}
+
+    public BeanWithOptionals(final Optional<String> optionalType,
+                             final OptionalInt optionalInt,
+                             final OptionalLong optionalLong,
+                             final OptionalDouble optionalDouble) {
+      this.optionalType = optionalType;
+      this.optionalInt = optionalInt;
+      this.optionalLong = optionalLong;
+      this.optionalDouble = optionalDouble;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      final BeanWithOptionals that = (BeanWithOptionals) o;
+      return Objects.equals(optionalType, that.optionalType) &&
+          Objects.equals(optionalInt, that.optionalInt) &&
+          Objects.equals(optionalLong, that.optionalLong) &&
+          Objects.equals(optionalDouble, that.optionalDouble);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(optionalType, optionalInt, optionalLong, optionalDouble);
+    }
+  }
+
   public static class BeanWithConstructor {
     final String name;
     final int age;
@@ -365,6 +454,21 @@ public class JsonDeserializationTest {
     public void setName(String name) {
           fail();
       }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      final BeanWithConstructor that = (BeanWithConstructor) o;
+      return age == that.age &&
+          Objects.equals(name, that.name) &&
+          Objects.equals(other, that.other);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(name, age, other);
+    }
   }
 
   public static class Empty {}
