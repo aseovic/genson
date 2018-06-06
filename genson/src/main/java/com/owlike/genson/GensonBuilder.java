@@ -6,6 +6,7 @@ import com.owlike.genson.reflect.*;
 import com.owlike.genson.reflect.BeanDescriptorProvider.CompositeBeanDescriptorProvider;
 import com.owlike.genson.reflect.AbstractBeanDescriptorProvider.ContextualFactoryDecorator;
 import com.owlike.genson.reflect.AbstractBeanDescriptorProvider.ContextualConverterFactory;
+import com.owlike.genson.stream.ValueType;
 
 import java.lang.reflect.Type;
 import java.text.DateFormat;
@@ -31,6 +32,7 @@ import java.util.*;
  * @author eugen
  */
 public class GensonBuilder {
+  private final DefaultTypes defaultTypes = new DefaultTypes();
   private final Map<Type, Serializer<?>> serializersMap = new HashMap<Type, Serializer<?>>();
   private final Map<Type, Deserializer<?>> deserializersMap = new HashMap<Type, Deserializer<?>>();
   private final List<Factory<?>> converterFactories = new ArrayList<Factory<?>>();
@@ -86,6 +88,21 @@ public class GensonBuilder {
     defaultValues.put(boolean.class, false);
     defaultValues.put(byte.class, (byte) 0);
     defaultValues.put(char.class, '\u0000');
+  }
+
+  /**
+   * Set the class to use for deserialization of the specified
+   * {@link ValueType} when the Java type cannot be determined
+   * based on static type information or JSON metadata.
+   *
+   * @param type  the {@code ValueType} to set the default class for
+   * @param clazz the default class for the specified {@code ValueType}
+   *
+   * @return a reference to this builder
+   */
+  public GensonBuilder setDefaultType(ValueType type, Class<?> clazz) {
+    defaultTypes.setClass(type, clazz);
+    return this;
   }
 
   /**
@@ -824,7 +841,8 @@ public class GensonBuilder {
                           Map<String, Class<?>> classAliases) {
     return new Genson(converterFactory, getBeanDescriptorProvider(),
       isSkipNull(), isHtmlSafe(), classAliases, withClassMetadata,
-      strictDoubleParse, indent, metadata, failOnMissingProperty, defaultValues, runtimePropertyFilter);
+      strictDoubleParse, indent, metadata, failOnMissingProperty,
+      defaultValues, defaultTypes, runtimePropertyFilter);
   }
 
   /**

@@ -551,7 +551,7 @@ public final class DefaultConverters {
         return Long.parseLong(value);
       } catch (NumberFormatException nfe) {
         throw new JsonBindingException("Could not convert input value " + value
-          + " of type " + valueType.toClass() + " to a Number type.", nfe);
+          + " of type " + valueType + " to a Number type.", nfe);
       }
     }
   }
@@ -993,8 +993,8 @@ public final class DefaultConverters {
       }
 
       public Object deserialize(ObjectReader reader, Context ctx) {
-        return ctx.genson.deserialize(GenericType.of(reader.getValueType().toClass()),
-          reader, ctx);
+        Class<?> defaultClass = ctx.genson.defaultClass(reader.getValueType());
+        return ctx.genson.deserialize(GenericType.of(defaultClass), reader, ctx);
       }
 
       public void serialize(Object obj, ObjectWriter writer, Context ctx) {

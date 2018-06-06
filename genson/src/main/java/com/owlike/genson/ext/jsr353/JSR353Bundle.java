@@ -27,6 +27,8 @@ public class JSR353Bundle extends GensonBundle {
   static final JsonBuilderFactory factory = JsonProvider.provider().createBuilderFactory(
     new HashMap<String, String>());
 
+  private boolean preferJsonpTypes = false;
+
   @Override
   public void configure(GensonBuilder builder) {
     builder.withConverterFactory(new Factory<Converter<JsonValue>>() {
@@ -35,8 +37,23 @@ public class JSR353Bundle extends GensonBundle {
         return new JsonValueConverter();
       }
     });
+
+    if (preferJsonpTypes) {
+      builder.setDefaultType(com.owlike.genson.stream.ValueType.ARRAY, JsonArray.class)
+             .setDefaultType(com.owlike.genson.stream.ValueType.BOOLEAN, JsonValue.class)
+             .setDefaultType(com.owlike.genson.stream.ValueType.DOUBLE, JsonNumber.class)
+             .setDefaultType(com.owlike.genson.stream.ValueType.INTEGER, JsonNumber.class)
+             .setDefaultType(com.owlike.genson.stream.ValueType.NULL, JsonValue.class)
+             .setDefaultType(com.owlike.genson.stream.ValueType.OBJECT, JsonObject.class)
+             .setDefaultType(com.owlike.genson.stream.ValueType.STRING, JsonString.class);
+    }
   }
 
+  public JSR353Bundle preferJsonpTypes() {
+    preferJsonpTypes = true;
+    return this;
+  }
+  
   public class JsonValueConverter implements Converter<JsonValue> {
 
     @Override

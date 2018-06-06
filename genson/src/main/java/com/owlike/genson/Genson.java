@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.owlike.genson.reflect.BeanDescriptor;
 import com.owlike.genson.reflect.BeanDescriptorProvider;
+import com.owlike.genson.reflect.DefaultTypes;
 import com.owlike.genson.reflect.RuntimePropertyFilter;
 import com.owlike.genson.stream.*;
 
@@ -71,6 +72,7 @@ public final class Genson {
   private final boolean failOnMissingProperty;
   private final EncodingAwareReaderFactory readerFactory = new EncodingAwareReaderFactory();
   private final Map<Class<?>, Object> defaultValues;
+  private final DefaultTypes defaultTypes;
   private final RuntimePropertyFilter runtimePropertyFilter;
 
   /**
@@ -81,7 +83,8 @@ public final class Genson {
     this(_default.converterFactory, _default.beanDescriptorFactory,
       _default.skipNull, _default.htmlSafe, _default.aliasClassMap,
       _default.withClassMetadata, _default.strictDoubleParse, _default.indent,
-      _default.withMetadata, _default.failOnMissingProperty, _default.defaultValues, _default.runtimePropertyFilter);
+      _default.withMetadata, _default.failOnMissingProperty, _default.defaultValues,
+      _default.defaultTypes, _default.runtimePropertyFilter);
   }
 
   /**
@@ -107,12 +110,14 @@ public final class Genson {
 *                          if withClassMetadata is true withMetadata will be automatically true.
    * @param failOnMissingProperty throw a JsonBindingException when a key in the json stream does not match a property in the Java Class.
    * @param defaultValues contains a mapping from the raw class to the default value that should be used when the property is missing.
+   * @param defaultValues contains a mapping from the raw class to the default value that should be used when the property is missing.
    * @param runtimePropertyFilter is used to define what bean properties should be excluded from ser/de at runtime.
    */
   public Genson(Factory<Converter<?>> converterFactory, BeanDescriptorProvider beanDescProvider,
                 boolean skipNull, boolean htmlSafe, Map<String, Class<?>> classAliases, boolean withClassMetadata,
                 boolean strictDoubleParse, boolean indent, boolean withMetadata, boolean failOnMissingProperty,
-                Map<Class<?>, Object> defaultValues, RuntimePropertyFilter runtimePropertyFilter) {
+                Map<Class<?>, Object> defaultValues, DefaultTypes defaultTypes,
+                RuntimePropertyFilter runtimePropertyFilter) {
     this.converterFactory = converterFactory;
     this.beanDescriptorFactory = beanDescProvider;
     this.skipNull = skipNull;
@@ -120,6 +125,7 @@ public final class Genson {
     this.aliasClassMap = classAliases;
     this.withClassMetadata = withClassMetadata;
     this.defaultValues = defaultValues;
+    this.defaultTypes = defaultTypes;
     this.runtimePropertyFilter = runtimePropertyFilter;
     this.classAliasMap = new HashMap<Class<?>, String>(classAliases.size());
     for (Map.Entry<String, Class<?>> entry : classAliases.entrySet()) {
@@ -603,6 +609,18 @@ public final class Genson {
    */
   public <T> T defaultValue(Class<T> clazz) {
     return (T) defaultValues.get(clazz);
+  }
+
+  /**
+   * Get the default class to use for deserialization of the
+   * specified {@link ValueType}.
+   *
+   * @param type  the {@code ValueType} to get the default class for
+   *
+   * @return the default class for the specified {@code ValueType}
+   */
+  public Class<?> defaultClass(ValueType type) {
+    return defaultTypes.getClass(type);
   }
 
   public RuntimePropertyFilter runtimePropertyFilter() {
