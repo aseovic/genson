@@ -20,10 +20,12 @@ public abstract class BeanCreator extends Wrapper<AnnotatedElement> implements C
   protected final Class<?> ofClass;
   protected final Map<String, BeanCreatorProperty> parameters;
   protected final Map<String, BeanCreatorProperty> paramsAndAliases;
+  protected final boolean annotated;
 
   public BeanCreator(Class<?> ofClass, Class<?> declaringClass, Class<?> concreteClass,
-                     String[] parameterNames, Type[] types, Annotation[][] anns) {
+                     String[] parameterNames, Type[] types, Annotation[][] anns, boolean annotated) {
     this.ofClass = ofClass;
+    this.annotated = annotated;
     this.parameters = new LinkedHashMap<String, BeanCreatorProperty>(parameterNames.length);
     for (int i = 0; i < parameterNames.length; i++) {
       this.parameters.put(parameterNames[i], new BeanCreatorProperty(parameterNames[i],
@@ -55,6 +57,10 @@ public abstract class BeanCreator extends Wrapper<AnnotatedElement> implements C
 
   public abstract int priority();
 
+  public boolean isAnnotated() {
+    return annotated;
+  }
+
   protected JsonBindingException couldNotCreate(Exception e) {
     return new JsonBindingException("Could not create bean of type " + ofClass.getName()
       + " using creator " + signature(), e);
@@ -70,9 +76,10 @@ public abstract class BeanCreator extends Wrapper<AnnotatedElement> implements C
     protected final Constructor<?> constructor;
 
     public ConstructorBeanCreator(Class<?> ofClass, Constructor<?> constructor,
-                                  String[] parameterNames, Type[] expandedParameterTypes) {
+                                  String[] parameterNames, Type[] expandedParameterTypes, boolean annotated) {
       // We can use the same class, as anyway we don't want to use constructors
-      super(ofClass, ofClass, ofClass, parameterNames, expandedParameterTypes, constructor.getParameterAnnotations());
+      super(ofClass, ofClass, ofClass, parameterNames, expandedParameterTypes,
+          constructor.getParameterAnnotations(), annotated);
       this.constructor = constructor;
       if (!constructor.isAccessible()) {
         constructor.setAccessible(true);
@@ -114,9 +121,9 @@ public abstract class BeanCreator extends Wrapper<AnnotatedElement> implements C
     protected final Method _creator;
 
     public MethodBeanCreator(Method method, String[] parameterNames,
-                             Type[] expandedParameterTypes, Class<?> concreteClass) {
+                             Type[] expandedParameterTypes, Class<?> concreteClass, boolean annotated) {
       super(method.getReturnType(), method.getDeclaringClass(), concreteClass, parameterNames,
-          expandedParameterTypes, method.getParameterAnnotations());
+          expandedParameterTypes, method.getParameterAnnotations(), annotated);
       if (!Modifier.isStatic(method.getModifiers()))
         throw new IllegalStateException("Only static methods can be used as creators!");
       this._creator = method;

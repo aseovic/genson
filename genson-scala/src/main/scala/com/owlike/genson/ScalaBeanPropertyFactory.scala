@@ -32,7 +32,7 @@ private[genson] class ScalaBeanPropertyFactory(classloader: ClassLoader) extends
     }
   }
 
-  def createCreator(ofType: Type, ctr: Constructor[_], resolvedNames: Array[String], genson: Genson): BeanCreator = {
+  def createCreator(ofType: Type, ctr: Constructor[_], resolvedNames: Array[String], annotated: Boolean, genson: Genson): BeanCreator = {
     ScalaReflectionApiLock.synchronized {
       val matchingCtrs = mirror.classSymbol(ctr.getDeclaringClass)
         .selfType
@@ -53,19 +53,19 @@ private[genson] class ScalaBeanPropertyFactory(classloader: ClassLoader) extends
         .toArray
 
       if (parameterTypes.length == ctr.getParameterTypes.length)
-        new ConstructorBeanCreator(TypeUtil.getRawClass(ofType), ctr, resolvedNames, parameterTypes)
+        new ConstructorBeanCreator(TypeUtil.getRawClass(ofType), ctr, resolvedNames, parameterTypes, annotated)
       else null
     }
   }
 
-  def createCreator(ofType: Type, method: Method, resolvedNames: Array[String], genson: Genson): BeanCreator = {
+  def createCreator(ofType: Type, method: Method, resolvedNames: Array[String], annotated: Boolean, genson: Genson): BeanCreator = {
     ScalaReflectionApiLock.synchronized {
       val parameterTypes = matchingMethod(method).paramss
         .flatten
         .flatMap(p => expandToJavaType(p.typeSignature, ofType))
         .toArray
       if (parameterTypes.length == method.getParameterTypes.length)
-        new MethodBeanCreator(method, resolvedNames, parameterTypes, TypeUtil.getRawClass(ofType))
+        new MethodBeanCreator(method, resolvedNames, parameterTypes, TypeUtil.getRawClass(ofType), annotated)
       else null
     }
   }
