@@ -1471,7 +1471,7 @@ public final class DefaultConverters {
         while (reader.hasNext()) {
           reader.next();
           if ("value".equals(reader.name())) {
-            return OptionalDouble.of(reader.valueAsLong());
+            return OptionalDouble.of(reader.valueAsDouble());
           }
         }
         return OptionalDouble.empty();
