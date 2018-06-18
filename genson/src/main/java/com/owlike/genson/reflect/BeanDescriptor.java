@@ -1,5 +1,6 @@
 package com.owlike.genson.reflect;
 
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -7,6 +8,7 @@ import com.owlike.genson.*;
 import com.owlike.genson.reflect.BeanCreator.BeanCreatorProperty;
 import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
+import com.owlike.genson.stream.ValueType;
 
 /**
  * BeanDescriptors are used to serialize/deserialize objects based on their fields, methods and
@@ -102,9 +104,35 @@ public class BeanDescriptor<T> implements Converter<T> {
       bean = ofClass.cast(creator.create());
       deserialize(bean, reader, ctx);
     } else {
-      if (creator == null)
+      if (creator == null) {
+
+        // It could be we're executing this block of code as
+        // the metadata for the type is using an interface type
+        // to resolve against which can't be instantiated and
+        // there is no class metadata avaialble.  In this case,
+        // if the configured default object is assignable to
+        // the interface type, then deserialize into the that
+        // type.
+        Class<?> defaultObjectClass = ctx.genson.defaultClass(ValueType.OBJECT);
+        if (ofClass.isAssignableFrom(defaultObjectClass)) {
+          final int modifiers = defaultObjectClass.getModifiers();
+          if ((!java.lang.reflect.Modifier.isAbstract(modifiers)
+              && !java.lang.reflect.Modifier.isInterface(modifiers))
+              && Modifier.isPublic(modifiers)) {
+            try {
+              Converter c = ctx.genson.provideConverter(ctx.genson.defaultClass(ValueType.OBJECT));
+              if (c != null) {
+                //noinspection unchecked
+                return (T) c.deserialize(reader, ctx);
+              }
+            } catch (Exception e) {
+              e.printStackTrace();
+            }
+          }
+        }
         throw new JsonBindingException("No constructor has been found for type "
-          + ofClass);
+            + ofClass);
+      }
       bean = _deserWithCtrArgs(reader, ctx);
     }
     return bean;
