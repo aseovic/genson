@@ -150,13 +150,13 @@ public class BeanViewDescriptorProvider extends BaseBeanDescriptorProvider {
 
     @Override
     public BeanCreator createCreator(Type ofType, Constructor<?> ctr,
-                                     String[] resolvedNames, Genson genson) {
+                                     String[] resolvedNames, boolean annotated, Genson genson) {
       return null;
     }
 
     @Override
     public BeanCreator createCreator(Type ofType, Method method,
-                                     String[] resolvedNames, Genson genson) {
+                                     String[] resolvedNames, boolean annotated, Genson genson) {
       return null;
     }
 
@@ -200,6 +200,16 @@ public class BeanViewDescriptorProvider extends BaseBeanDescriptorProvider {
           + " annotated with @Creator must be static!");
       }
       return FALSE;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Constructor<?> constructor) {
+      return constructor.getAnnotation(JsonCreator.class) != null;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Method method) {
+      return method.getAnnotation(JsonCreator.class) != null;
     }
 
     public Trilean isMutator(Field field, Class<?> baseClass) {

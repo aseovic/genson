@@ -321,13 +321,13 @@ public class JAXBBundle extends GensonBundle {
 
     @Override
     public BeanCreator createCreator(Type ofType, Constructor<?> ctr, String[] resolvedNames,
-                                     Genson genson) {
+                                     boolean annotated, Genson genson) {
       return null;
     }
 
     @Override
     public BeanCreator createCreator(Type ofType, Method method, String[] resolvedNames,
-                                     Genson genson) {
+                                     boolean annotated, Genson genson) {
       return null;
     }
 

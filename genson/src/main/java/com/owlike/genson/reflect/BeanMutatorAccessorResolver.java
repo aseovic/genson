@@ -52,6 +52,10 @@ public interface BeanMutatorAccessorResolver {
 
   Trilean isCreator(Method method, Class<?> fromClass);
 
+  boolean isCreatorAnnotated(Constructor<?> constructor);
+
+  boolean isCreatorAnnotated(Method method);
+
   Trilean isAccessor(Field field, Class<?> fromClass);
 
   Trilean isAccessor(Method method, Class<?> fromClass);
@@ -79,6 +83,16 @@ public interface BeanMutatorAccessorResolver {
     @Override
     public Trilean isCreator(Method method, Class<?> fromClass) {
       return UNKNOWN;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Constructor<?> constructor) {
+      return false;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Method method) {
+      return false;
     }
 
     @Override
@@ -191,6 +205,22 @@ public interface BeanMutatorAccessorResolver {
         }
       }
       return UNKNOWN;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Constructor<?> constructor) {
+      if (constructor == null || creatorAnnotation == null) {
+        return false;
+      }
+      return constructor.getAnnotation(creatorAnnotation) != null;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Method method) {
+      if (method == null || creatorAnnotation == null) {
+        return false;
+      }
+      return method.getAnnotation(creatorAnnotation) != null;
     }
 
     /**
@@ -472,6 +502,24 @@ public interface BeanMutatorAccessorResolver {
     }
 
     @Override
+    public boolean isCreatorAnnotated(final Constructor<?> constructor) {
+      boolean resolved = false;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); !resolved && it.hasNext(); ) {
+        resolved = it.next().isCreatorAnnotated(constructor);
+      }
+      return resolved;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Method method) {
+      boolean resolved = false;
+      for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); !resolved && it.hasNext(); ) {
+        resolved = it.next().isCreatorAnnotated(method);
+      }
+      return resolved;
+    }
+
+    @Override
     public Trilean isMutator(Field field, Class<?> fromClass) {
       Trilean resolved = UNKNOWN;
       for (Iterator<BeanMutatorAccessorResolver> it = components.iterator(); resolved == null || resolved.equals(UNKNOWN)
@@ -586,6 +634,16 @@ public interface BeanMutatorAccessorResolver {
 
     public Trilean isCreator(Method method, Class<?> fromClass) {
       return FALSE;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Constructor<?> constructor) {
+      return false;
+    }
+
+    @Override
+    public boolean isCreatorAnnotated(final Method method) {
+      return false;
     }
 
     public Trilean isMutator(Field field, Class<?> fromClass) {

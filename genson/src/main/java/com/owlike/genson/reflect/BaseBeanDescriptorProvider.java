@@ -125,6 +125,7 @@ public class BaseBeanDescriptorProvider extends AbstractBeanDescriptorProvider {
     Constructor<?>[] ctrs = ofClass.getDeclaredConstructors();
     for (Constructor<?> ctr : ctrs) {
       if (TRUE == mutatorAccessorResolver.isCreator(ctr, ofClass)) {
+        boolean annotated = mutatorAccessorResolver.isCreatorAnnotated(ctr);
         Type[] parameterTypes = ctr.getGenericParameterTypes();
         int paramCnt = parameterTypes.length;
         String[] parameterNames = new String[paramCnt];
@@ -136,7 +137,7 @@ public class BaseBeanDescriptorProvider extends AbstractBeanDescriptorProvider {
         }
 
         if (idx == paramCnt) {
-          BeanCreator creator = propertyFactory.createCreator(ofType, ctr, parameterNames, genson);
+          BeanCreator creator = propertyFactory.createCreator(ofType, ctr, parameterNames, annotated, genson);
           creators.add(creator);
         }
       }
@@ -148,6 +149,7 @@ public class BaseBeanDescriptorProvider extends AbstractBeanDescriptorProvider {
     Method[] ctrs = ofClass.getDeclaredMethods();
     for (Method ctr : ctrs) {
       if (TRUE == mutatorAccessorResolver.isCreator(ctr, getRawClass(ofType))) {
+        boolean annotated = mutatorAccessorResolver.isCreatorAnnotated(ctr);
         Type[] parameterTypes = ctr.getGenericParameterTypes();
         int paramCnt = parameterTypes.length;
         String[] parameterNames = new String[paramCnt];
@@ -159,7 +161,7 @@ public class BaseBeanDescriptorProvider extends AbstractBeanDescriptorProvider {
         }
 
         if (idx == paramCnt) {
-          BeanCreator creator = propertyFactory.createCreator(ofType, ctr, parameterNames, genson);
+          BeanCreator creator = propertyFactory.createCreator(ofType, ctr, parameterNames, annotated, genson);
           creators.add(creator);
         }
       }
@@ -265,7 +267,7 @@ public class BaseBeanDescriptorProvider extends AbstractBeanDescriptorProvider {
     // first lets do some checks
     for (int i = 0; i < creators.size(); i++) {
       BeanCreator ctr = creators.get(i);
-      if (ctr.isAnnotationPresent(JsonCreator.class)) {
+      if (ctr.isAnnotated()) {
         if (!hasCreatorAnnotation)
           hasCreatorAnnotation = true;
         else
@@ -276,7 +278,7 @@ public class BaseBeanDescriptorProvider extends AbstractBeanDescriptorProvider {
 
     if (hasCreatorAnnotation) {
       for (BeanCreator ctr : creators)
-        if (ctr.isAnnotationPresent(JsonCreator.class)) return ctr;
+        if (ctr.isAnnotated()) return ctr;
     } else {
       creator = creators.get(0);
     }

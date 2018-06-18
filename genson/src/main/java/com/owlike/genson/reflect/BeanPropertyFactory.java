@@ -16,10 +16,10 @@ public interface BeanPropertyFactory {
 
   PropertyAccessor createAccessor(String name, Method method, Type ofType, Genson genson);
 
-  BeanCreator createCreator(Type ofType, Constructor<?> ctr, String[] resolvedNames,
+  BeanCreator createCreator(Type ofType, Constructor<?> ctr, String[] resolvedNames, boolean annotated,
                                    Genson genson);
 
-  BeanCreator createCreator(Type ofType, Method method, String[] resolvedNames,
+  BeanCreator createCreator(Type ofType, Method method, String[] resolvedNames, boolean annotated,
                                    Genson genson);
 
   PropertyMutator createMutator(String name, Field field, Type ofType, Genson genson);
@@ -54,9 +54,9 @@ public interface BeanPropertyFactory {
 
     @Override
     public BeanCreator createCreator(Type ofType, Constructor<?> ctr, String[] resolvedNames,
-                                     Genson genson) {
+                                     boolean annotated, Genson genson) {
       for (BeanPropertyFactory factory : factories) {
-        BeanCreator creator = factory.createCreator(ofType, ctr, resolvedNames, genson);
+        BeanCreator creator = factory.createCreator(ofType, ctr, resolvedNames, annotated, genson);
         if (creator != null) return creator;
       }
       throw new RuntimeException("Failed to create a BeanCreator for constructor " + ctr);
@@ -64,9 +64,9 @@ public interface BeanPropertyFactory {
 
     @Override
     public BeanCreator createCreator(Type ofType, Method method, String[] resolvedNames,
-                                     Genson genson) {
+                                     boolean annotated, Genson genson) {
       for (BeanPropertyFactory factory : factories) {
-        BeanCreator creator = factory.createCreator(ofType, method, resolvedNames, genson);
+        BeanCreator creator = factory.createCreator(ofType, method, resolvedNames, annotated, genson);
         if (creator != null) return creator;
       }
       throw new RuntimeException("Failed to create a BeanCreator for method " + method);
@@ -120,15 +120,15 @@ public interface BeanPropertyFactory {
     // ofClass is not necessarily of same type as method return type, as ofClass corresponds to
     // the declaring class!
     public BeanCreator createCreator(Type ofType, Method method, String[] resolvedNames,
-                                     Genson genson) {
+                                     boolean annotated, Genson genson) {
       return new BeanCreator.MethodBeanCreator(method, resolvedNames, expandTypes(
-        method.getGenericParameterTypes(), ofType), getRawClass(ofType));
+        method.getGenericParameterTypes(), ofType), getRawClass(ofType), annotated);
     }
 
     public BeanCreator createCreator(Type ofType, Constructor<?> ctr, String[] resolvedNames,
-                                     Genson genson) {
+                                     boolean annotated, Genson genson) {
       return new BeanCreator.ConstructorBeanCreator(getRawClass(ofType), ctr, resolvedNames,
-        expandTypes(ctr.getGenericParameterTypes(), ofType));
+        expandTypes(ctr.getGenericParameterTypes(), ofType), annotated);
     }
 
     public Type[] expandTypes(Type[] typesToExpand, Type inContext) {
