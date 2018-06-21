@@ -270,11 +270,14 @@ public class JsonWriter implements ObjectWriter {
     beforeValue();
     // ok so the buffer must always be bigger than the max length of a short
     if ((_len + 5) >= _bufferSize) flushBuffer();
+
     if (value < 0) {
-      _buffer[_len++] = '-';
-      value *= -1;
-    }
-    writeInt(value);
+      if (value != Short.MIN_VALUE) {
+        _buffer[_len++] = '-';
+        writeInt(-1 * value);
+      } else writeToBuffer(Short.toString(value), 0);
+    } else writeInt(value);
+
     _hasPrevious = true;
     return this;
   }
