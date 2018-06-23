@@ -1124,7 +1124,7 @@ public final class DefaultConverters {
 
     @Override
     public void serialize(BigDecimal object, ObjectWriter writer, Context ctx) {
-      writer.writeValue(object);
+      writer.writeValue(object.toString());
     }
   }
 
@@ -1143,7 +1143,7 @@ public final class DefaultConverters {
 
     @Override
     public void serialize(BigInteger object, ObjectWriter writer, Context ctx) {
-      writer.writeValue(object);
+      writer.writeValue(object.toString());
     }
   }
 
