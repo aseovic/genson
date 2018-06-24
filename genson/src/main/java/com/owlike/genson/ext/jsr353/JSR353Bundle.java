@@ -24,7 +24,7 @@ import com.owlike.genson.stream.ObjectReader;
 import com.owlike.genson.stream.ObjectWriter;
 
 public class JSR353Bundle extends GensonBundle {
-  static final JsonBuilderFactory factory = JsonProvider.provider().createBuilderFactory(
+  static final JsonBuilderFactory factory = new GensonJsonProvider().createBuilderFactory(
     new HashMap<String, String>());
 
   private boolean preferJsonpTypes = false;
