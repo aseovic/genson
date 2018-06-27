@@ -93,7 +93,7 @@ public class JsonReader implements ObjectReader {
   private ValueType valueType;
   private boolean _first = true;
   private boolean _metadata_readen = false;
-  private Map<String, String> _metadata = new HashMap<String, String>(5);
+  private Map<String, Object> _metadata = new HashMap<>(5);
 
   private final Deque<JsonType> _ctx = new ArrayDeque<JsonType>(10);
 
@@ -287,14 +287,24 @@ public class JsonReader implements ObjectReader {
       + valueType);
   }
 
-  public Map<String, String> metadata() {
+  public Map<String, Object> metadata() {
     if (!_metadata_readen) nextObjectMetadata();
     return Collections.unmodifiableMap(_metadata);
   }
 
   public String metadata(String name) {
     if (!_metadata_readen) nextObjectMetadata();
-    return _metadata.get(name);
+    return (String) _metadata.get(name);
+  }
+
+  public Long metadataAsLong(String name) {
+    if (!_metadata_readen) nextObjectMetadata();
+    return (Long) _metadata.get(name);
+  }
+
+  public Boolean metadataAsBoolean(String name) {
+    if (!_metadata_readen) nextObjectMetadata();
+    return (Boolean) _metadata.get(name);
   }
 
   public ValueType getValueType() {
@@ -402,8 +412,17 @@ public class JsonReader implements ObjectReader {
 
         if (readNextToken(true) != ':') newWrongTokenException(":", _cursor - 1);
 
-        String value = consumeString((char) readNextToken(false));
-        _metadata.put(key, value);
+        ctoken = (char) readNextToken(false);
+        if (ctoken == '"') {
+          String value = consumeString((char) readNextToken(false));
+          _metadata.put(key, value);
+        } else {
+          ValueType valueType = consumeLiteral();
+          if (valueType == ValueType.BOOLEAN) {
+            _metadata.put(key, _booleanValue);
+          } else if (valueType == ValueType.INTEGER)
+            _metadata.put(key, _intValue);
+        }
         if (readNextToken(false) == ',') {
           _cursor++;
         }

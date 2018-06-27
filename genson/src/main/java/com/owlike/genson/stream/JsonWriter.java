@@ -62,7 +62,7 @@ public class JsonWriter implements ObjectWriter {
   private final int _bufferSize = _buffer.length;
   private int _len = 0;
 
-  Map<String, String> _metadata = new LinkedHashMap<>();
+  Map<String, Object> _metadata = new LinkedHashMap<>();
 
   public JsonWriter(Writer writer) {
     this(writer, false, false, false);
@@ -114,7 +114,14 @@ public class JsonWriter implements ObjectWriter {
       for (String name : _metadata.keySet()) {
         writeName('@' + name);
         beforeValue();
-        writeInternalString(_metadata.get(name));
+        Object value = _metadata.get(name);
+        if (value instanceof String) {
+          writeInternalString((String) value);
+        } else if (value instanceof Long) {
+          writeNumber((Long) value);
+        } else {
+          writeBoolean((Boolean) value);
+        }
       }
     } else begin(JsonType.OBJECT, '{');
     return this;
@@ -499,7 +506,32 @@ public class JsonWriter implements ObjectWriter {
       writeName('@' + name);
       writeValue(value);
     }
-    // else do nothing so we silently don't write metadata for literals and arrays
+    return this;
+  }
+
+  @Override
+  public ObjectWriter writeMetadata(final String name, final Long value) {
+    if (_ctx.peek() == JsonType.METADATA) {
+      _metadata.put(name, value);
+    }
+    else if (_ctx.peek() == JsonType.OBJECT) {
+      writeName('@' + name);
+      writeValue(value);
+    }
+
+    return this;
+  }
+
+  @Override
+  public ObjectWriter writeMetadata(final String name, final Boolean value) {
+    if (_ctx.peek() == JsonType.METADATA) {
+      _metadata.put(name, value);
+    }
+    else if (_ctx.peek() == JsonType.OBJECT) {
+      writeName('@' + name);
+      writeValue(value);
+    }
+
     return this;
   }
 

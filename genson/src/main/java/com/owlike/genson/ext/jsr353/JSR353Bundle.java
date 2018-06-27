@@ -120,9 +120,16 @@ public class JSR353Bundle extends GensonBundle {
       JsonObjectBuilder builder = factory.createObjectBuilder();
 
       // copy metadata first
-      Map<String, String> metadata = reader.metadata();
+      Map<String, Object> metadata = reader.metadata();
       for (String key : metadata.keySet()) {
-        builder.add('@' + key, metadata.get(key));
+        Object value = metadata.get(key);
+        if (value instanceof String) {
+          builder.add('@' + key, (String) value);
+        } else if (value instanceof Number) {
+          builder.add('@' + key, ((Number) value).longValue());
+        } else {
+          builder.add('@' + key, (Boolean) value);
+        }
       }
 
       while (reader.hasNext()) {

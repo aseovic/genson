@@ -166,7 +166,7 @@ public interface ObjectReader extends Closeable {
    * @return the map containing all metadata key/value pairs.
    * @throws JsonStreamException
    */
-  Map<String, String> metadata();
+  Map<String, Object> metadata();
 
   /**
    * The value of a specified metadata attribute.
@@ -177,6 +177,16 @@ public interface ObjectReader extends Closeable {
    * @throws JsonStreamException
    */
   String metadata(String name);
+
+  /**
+   * @see #metadata(String)
+   */
+  Long metadataAsLong(String name);
+
+  /**
+   * @see #metadata(String)
+   */
+  Boolean metadataAsBoolean(String name);
 
   /**
    * @return the name of current property, valid only if we are in a object and you called
