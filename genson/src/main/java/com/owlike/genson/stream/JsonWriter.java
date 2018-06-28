@@ -205,7 +205,7 @@ public class JsonWriter implements ObjectWriter {
         + "values without keys in JsonObjects, authorized only for arrays."));
   }
 
-  private final void clearMetadata() {
+  public final void clearMetadata() {
     if (_ctx.peek() == JsonType.METADATA) {
       _metadata.clear();
       _ctx.pop();
