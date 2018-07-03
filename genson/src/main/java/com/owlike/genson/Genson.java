@@ -76,6 +76,7 @@ public final class Genson {
   private final DefaultTypes defaultTypes;
   private final RuntimePropertyFilter runtimePropertyFilter;
   private final UnknownPropertyHandler unknownPropertyHandler;
+  private final ClassLoader loader;
 
   /**
    * The default constructor will use the default configuration provided by the {@link GensonBuilder}.
@@ -86,7 +87,8 @@ public final class Genson {
       _default.skipNull, _default.htmlSafe, _default.aliasClassMap,
       _default.withClassMetadata, _default.strictDoubleParse, _default.indent,
       _default.withMetadata, _default.failOnMissingProperty, _default.defaultValues,
-      _default.defaultTypes, _default.runtimePropertyFilter, _default.unknownPropertyHandler);
+      _default.defaultTypes, _default.runtimePropertyFilter, _default.unknownPropertyHandler,
+        Genson.class.getClassLoader());
   }
 
   /**
@@ -120,7 +122,8 @@ public final class Genson {
                 boolean skipNull, boolean htmlSafe, Map<String, Class<?>> classAliases, boolean withClassMetadata,
                 boolean strictDoubleParse, boolean indent, boolean withMetadata, boolean failOnMissingProperty,
                 Map<Class<?>, Object> defaultValues, DefaultTypes defaultTypes,
-                RuntimePropertyFilter runtimePropertyFilter, UnknownPropertyHandler unknownPropertyHandler) {
+                RuntimePropertyFilter runtimePropertyFilter, UnknownPropertyHandler unknownPropertyHandler,
+                ClassLoader classLoader) {
     this.converterFactory = converterFactory;
     this.beanDescriptorFactory = beanDescProvider;
     this.skipNull = skipNull;
@@ -139,6 +142,7 @@ public final class Genson {
     this.withMetadata = withClassMetadata || withMetadata;
     this.failOnMissingProperty = failOnMissingProperty;
     this.unknownPropertyHandler = unknownPropertyHandler;
+    this.loader = classLoader;
   }
 
   /**
@@ -523,7 +527,12 @@ public final class Genson {
   public Class<?> classFor(String alias) throws ClassNotFoundException {
     Class<?> clazz = aliasClassMap.get(alias);
     if (clazz == null) {
-      clazz = Class.forName(alias);
+      if (loader != null) {
+        clazz = Class.forName(alias, true, loader);
+      } else {
+        clazz = Class.forName(alias);
+      }
+
       aliasClassMap.put(alias, clazz);
     }
     return clazz;
@@ -633,6 +642,10 @@ public final class Genson {
 
   public UnknownPropertyHandler unknownPropertyHandler() {
     return unknownPropertyHandler;
+  }
+
+  public ClassLoader getClassLoader() {
+    return loader;
   }
 
   /**

@@ -867,7 +867,7 @@ public class GensonBuilder {
     return new Genson(converterFactory, getBeanDescriptorProvider(),
       isSkipNull(), isHtmlSafe(), classAliases, withClassMetadata,
       strictDoubleParse, indent, metadata, failOnMissingProperty,
-      defaultValues, defaultTypes, runtimePropertyFilter, unknownPropertyHandler);
+      defaultValues, defaultTypes, runtimePropertyFilter, unknownPropertyHandler, classLoader);
   }
 
   /**
