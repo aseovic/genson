@@ -283,6 +283,16 @@ public interface ObjectWriter {
   public ObjectWriter writeMetadata(String name, String value);
 
   /**
+   * @see #writeMetadata(String, String)
+   */
+  public ObjectWriter writeMetadata(String name, Long value);
+
+  /**
+   * @see #writeMetadata(String, String)
+   */
+  public ObjectWriter writeMetadata(String name, Boolean value);
+
+  /**
    * @see #writeString(String, String)
    */
   public ObjectWriter writeBoolean(String name, Boolean value);
