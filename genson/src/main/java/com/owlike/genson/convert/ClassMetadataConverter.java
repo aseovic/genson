@@ -94,7 +94,7 @@ public class ClassMetadataConverter<T> extends Wrapper<Converter<T>> implements 
           }
         } catch (ClassNotFoundException e) {
           throw new JsonBindingException(
-            "Could not use @class metadata, no such class: " + className);
+            "Could not use @class metadata, no such class: " + className, e);
         }
       }
     }
