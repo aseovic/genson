@@ -233,11 +233,33 @@ public final class Genson {
    * Serializes this object to the passed Writer, as Genson did not instantiate it, you are
    * responsible of calling close on it.
    */
+  public void serialize(Object object, GenericType<?> type, Writer writer) {
+    ObjectWriter objectWriter = createWriter(writer);
+
+    if (object == null) serializeNull(objectWriter);
+    else serialize(object, type.getType(), objectWriter, new Context(this));
+  }
+
+  /**
+   * Serializes this object to the passed Writer, as Genson did not instantiate it, you are
+   * responsible of calling close on it.
+   */
   public void serialize(Object object, Writer writer) {
     ObjectWriter objectWriter = createWriter(writer);
 
     if (object == null) serializeNull(objectWriter);
     else serialize(object, object.getClass(), objectWriter, new Context(this));
+  }
+
+  /**
+   * Serializes this object to the passed OutputStream, as Genson did not instantiate it, you are
+   * responsible of calling close on it.
+   */
+  public void serialize(Object object, GenericType<?> type, OutputStream output) {
+    ObjectWriter objectWriter = createWriter(output);
+
+    if (object == null) serializeNull(objectWriter);
+    else serialize(object, type.getType(), objectWriter, new Context(this));
   }
 
   /**
