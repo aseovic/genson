@@ -27,9 +27,9 @@ maven_deploy:
     - export
     - echo $MAVEN_SETTINGS_XML > settings.xml
     - > 
-      mvn -B -DaltSnapshotDeploymentRepository=snapshots::default::$MAVEN_SNAPSHOTS_URL 
-      -DaltReleaseDeploymentRepository=releases::default::$MAVEN_RELEASES_URL
-      -DskipTests=true -P javadoc -s settings.xml $OVERRIDE clean install deploy
+      mvn -B -DaltSnapshotDeploymentRepository=sonatype-nexus-snapshots::default::$MAVEN_SNAPSHOTS_URL 
+      -DaltReleaseDeploymentRepository=sonatype-nexus-staging::default::$MAVEN_RELEASES_URL
+      -DskipTests=true -s settings.xml $OVERRIDE clean install deploy
   tags:
     - docker
     - privileged
