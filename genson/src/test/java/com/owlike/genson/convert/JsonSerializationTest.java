@@ -86,6 +86,17 @@ public class JsonSerializationTest {
   }
 
   @Test
+  public void testSerializeWithPackageAlias() {
+    Genson genson = new GensonBuilder().addPackageAlias("test", "com.owlike.genson.convert").create();
+    String json = genson.serialize(new ClassWithFieldsAndGetter("a", 0));
+    assertTrue(json.startsWith("{\"@class\":\"test.JsonSerializationTest$ClassWithFieldsAndGetter\""));
+    genson = new GensonBuilder().useClassMetadata(true).create();
+    json = genson.serialize(new ClassWithFieldsAndGetter("a", 0));
+    assertTrue(json
+        .startsWith("{\"@class\":\"com.owlike.genson.convert.JsonSerializationTest$ClassWithFieldsAndGetter\""));
+  }
+
+  @Test
   public void testSerializeEnum() {
     assertEquals("\"JAVA\"", genson.serialize(Player.JAVA));
   }
