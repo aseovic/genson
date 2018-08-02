@@ -6,6 +6,7 @@ stages:
   - release
     
 maven_build:
+  image: iad.ocir.io/odx-stateservice/runtime/jdk:8u171
   stage: build
   script:
     - export
@@ -22,6 +23,7 @@ maven_build:
     - privileged
 
 maven_deploy:
+  image: iad.ocir.io/odx-stateservice/runtime/jdk:8u171
   stage: deploy
   script:
     - export
