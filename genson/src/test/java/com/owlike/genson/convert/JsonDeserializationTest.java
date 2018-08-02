@@ -315,6 +315,15 @@ public class JsonDeserializationTest {
   }
 
   @Test
+  public void testDeserializeJsonWithPackageAlias() {
+    Genson genson = new GensonBuilder().addPackageAlias("awt", "java.awt").create();
+    Shape p = genson.deserialize("{\"@class\":\"awt.Rectangle\"}", Shape.class);
+    assertTrue(p instanceof Rectangle);
+    p = genson.deserialize("{\"@class\":\"java.awt.Rectangle\"}", Shape.class);
+    assertTrue(p instanceof Rectangle);
+  }
+
+  @Test
   public void testDeserealizeIntoExistingBean() {
     BeanDescriptor<ClassWithConstructorFieldsAndGetters> desc = (BeanDescriptor<ClassWithConstructorFieldsAndGetters>) genson
       .getBeanDescriptorProvider().provide(ClassWithConstructorFieldsAndGetters.class,

@@ -64,6 +64,8 @@ public final class Genson {
   private final BeanDescriptorProvider beanDescriptorFactory;
   private final Map<Class<?>, String> classAliasMap;
   private final Map<String, Class<?>> aliasClassMap;
+  private final Map<String, String> aliasPackageMap;
+  private final Map<String, String> packageAliasMap;
   private final boolean skipNull;
   private final boolean htmlSafe;
   private final boolean withClassMetadata;
@@ -84,7 +86,7 @@ public final class Genson {
    */
   public Genson() {
     this(_default.converterFactory, _default.beanDescriptorFactory,
-      _default.skipNull, _default.htmlSafe, _default.aliasClassMap,
+      _default.skipNull, _default.htmlSafe, _default.aliasClassMap, _default.aliasPackageMap,
       _default.withClassMetadata, _default.strictDoubleParse, _default.indent,
       _default.withMetadata, _default.failOnMissingProperty, _default.defaultValues,
       _default.defaultTypes, _default.runtimePropertyFilter, _default.unknownPropertyHandler,
@@ -97,21 +99,23 @@ public final class Genson {
    * @param beanDescProvider  providing instance of {@link BeanDescriptor
    *                          BeanDescriptor} used during bean serialization and deserialization.
    * @param skipNull          indicates whether null values should be serialized. False by default, null values
-*                          will be serialized.
+   *                          will be serialized.
    * @param htmlSafe          indicates whether \,<,>,&,= characters should be replaced by their Unicode
-*                          representation.
+   *                          representation.
    * @param classAliases      association map between classes and their aliases, used if withClassMetadata is
-*                          true.
+   *                          true.
+   * @param packageAliases    association map between a group of classes in a package and their alias,
+   *                          used if withClassMetadata is true.
    * @param withClassMetadata indicates whether class name should be serialized and used during deserialization
-*                          to determine the type. False by default.
+   *                          to determine the type. False by default.
    * @param strictDoubleParse indicates whether to use or not double approximation. If false (by default) it
-*                          enables Genson custom double parsing algorithm, that is an approximation of
-*                          Double.parse but is a lot faster. If true, Double.parse method will be usead
-*                          instead. In most cases you should be fine with Genson algorithm, but if for some
-*                          reason you need to have 100% match with Double.parse, then enable strict parsing.
+   *                          enables Genson custom double parsing algorithm, that is an approximation of
+   *                          Double.parse but is a lot faster. If true, Double.parse method will be usead
+   *                          instead. In most cases you should be fine with Genson algorithm, but if for some
+   *                          reason you need to have 100% match with Double.parse, then enable strict parsing.
    * @param indent            true if outputed json must be indented (pretty printed).
    * @param withMetadata      true if ObjectReader instances must be configured with metadata feature enabled.
-*                          if withClassMetadata is true withMetadata will be automatically true.
+   *                          if withClassMetadata is true withMetadata will be automatically true.
    * @param failOnMissingProperty throw a JsonBindingException when a key in the json stream does not match a property in the Java Class.
    * @param defaultValues contains a mapping from the raw class to the default value that should be used when the property is missing.
    * @param defaultValues contains a mapping from the raw class to the default value that should be used when the property is missing.
@@ -119,7 +123,8 @@ public final class Genson {
    * @param unknownPropertyHandler is used to handle unknown properties during ser/de.
    */
   public Genson(Factory<Converter<?>> converterFactory, BeanDescriptorProvider beanDescProvider,
-                boolean skipNull, boolean htmlSafe, Map<String, Class<?>> classAliases, boolean withClassMetadata,
+                boolean skipNull, boolean htmlSafe, Map<String, Class<?>> classAliases,
+                Map<String,String> packageAliases, boolean withClassMetadata,
                 boolean strictDoubleParse, boolean indent, boolean withMetadata, boolean failOnMissingProperty,
                 Map<Class<?>, Object> defaultValues, DefaultTypes defaultTypes,
                 RuntimePropertyFilter runtimePropertyFilter, UnknownPropertyHandler unknownPropertyHandler,
@@ -129,6 +134,7 @@ public final class Genson {
     this.skipNull = skipNull;
     this.htmlSafe = htmlSafe;
     this.aliasClassMap = classAliases;
+    this.aliasPackageMap = packageAliases;
     this.withClassMetadata = withClassMetadata;
     this.defaultValues = defaultValues;
     this.defaultTypes = defaultTypes;
@@ -136,6 +142,10 @@ public final class Genson {
     this.classAliasMap = new HashMap<Class<?>, String>(classAliases.size());
     for (Map.Entry<String, Class<?>> entry : classAliases.entrySet()) {
       classAliasMap.put(entry.getValue(), entry.getKey());
+    }
+    this.packageAliasMap = new HashMap<>(aliasPackageMap.size());
+    for (Map.Entry<String, String> entry : aliasPackageMap.entrySet()) {
+      packageAliasMap.put(entry.getValue(), entry.getKey());
     }
     this.strictDoubleParse = strictDoubleParse;
     this.indent = indent;
@@ -525,13 +535,25 @@ public final class Genson {
   }
 
     /**
-     * Searches if an alias has been registered for clazz. If not will take the class full name and
-     * use it as alias. This method never returns null.
+     * Searches if an alias has been registered for clazz or package. If not, it will take the class full name and
+     * use it as alias. This method never returns <code>null</code>.
      */
   public <T> String aliasFor(Class<T> clazz) {
     String alias = classAliasMap.get(clazz);
     if (alias == null) {
       alias = clazz.getName();
+
+      // next, check if the alias matches any defined package aliases
+      int classNameBoundary = alias.lastIndexOf('.');
+      String packageName = alias.substring(0, classNameBoundary);
+
+      String packageAlias = packageAliasMap.get(packageName);
+      if (packageAlias != null) {
+        String className = alias.substring(classNameBoundary);
+        alias = packageAlias + className;
+        aliasClassMap.put(alias, clazz);
+      }
+
       classAliasMap.put(clazz, alias);
     }
     return alias;
@@ -549,6 +571,17 @@ public final class Genson {
   public Class<?> classFor(String alias) throws ClassNotFoundException {
     Class<?> clazz = aliasClassMap.get(alias);
     if (clazz == null) {
+      // check to see if this was an aliased package
+      int separator = alias.indexOf('.');
+      if (alias.indexOf('.', separator + 1) < 0) {
+        String packageAlias = alias.substring(0, separator);
+        String packageToUse = aliasPackageMap.get(packageAlias);
+        if (packageToUse != null) {
+          String className = alias.substring(separator);
+          alias = packageToUse + className;
+        }
+      }
+
       if (loader != null) {
         clazz = Class.forName(alias, true, loader);
       } else {

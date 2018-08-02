@@ -77,6 +77,7 @@ public class GensonBuilder {
   private BeanViewDescriptorProvider beanViewDescriptorProvider;
 
   private final Map<String, Class<?>> withClassAliases = new HashMap<String, Class<?>>();
+  private final Map<String, String> withPackageAliases = new HashMap<>();
   private final Map<Class<?>, BeanView<?>> registeredViews = new HashMap<Class<?>, BeanView<?>>();
 
   private ChainedFactory customFactoryChain;
@@ -126,6 +127,34 @@ public class GensonBuilder {
   public GensonBuilder addAlias(String alias, Class<?> forClass) {
     withClassMetadata = true;
     withClassAliases.put(alias, forClass);
+    return this;
+  }
+
+  /**
+   * Similar to {@link #addAlias(String, Class)}, this allows creating an alias for all
+   * serialized classes within a package.  When a class is present within the specified
+   * package, instead of the full class name being serialized, it will generate the
+   * following String:
+   *     <code>alias + '.' + className</code>
+   *
+   * @param alias alias for classes within a specific package.  The provided
+   *              value must not contain a period (<code>.</code>)
+   * @param forPackage the package to which the alias will be applied
+   *
+   * @throws IllegalArgumentException if <code>alias</code> contains a period
+   *
+   * @return a reference to this builder
+   *
+   * @since 2.0
+   *
+   * @see #addAlias(String, Class)
+   */
+  public GensonBuilder addPackageAlias(String alias, String forPackage) {
+    if (alias.indexOf('.') > -1) {
+      throw new IllegalArgumentException(String.format("Package aliases must not contain '.'"));
+    }
+    withClassMetadata = true;
+    withPackageAliases.put(alias, forPackage);
     return this;
   }
 
@@ -824,7 +853,7 @@ public class GensonBuilder {
       );
     }
 
-    return create(createConverterFactory(), withClassAliases);
+    return create(createConverterFactory(), withClassAliases, withPackageAliases);
   }
 
   private void addDefaultSerializers(List<? extends Serializer<?>> serializers) {
@@ -859,13 +888,14 @@ public class GensonBuilder {
    * @return a new Genson instance.
    */
   protected Genson create(Factory<Converter<?>> converterFactory,
-                          Map<String, Class<?>> classAliases) {
+                          Map<String, Class<?>> classAliases,
+                          Map<String, String> packageAliases) {
     if (chainedFactoryModifier != null && converterFactory instanceof ChainedFactory) {
         chainedFactoryModifier.apply((ChainedFactory) converterFactory);
     }
 
     return new Genson(converterFactory, getBeanDescriptorProvider(),
-      isSkipNull(), isHtmlSafe(), classAliases, withClassMetadata,
+      isSkipNull(), isHtmlSafe(), classAliases, withPackageAliases, withClassMetadata,
       strictDoubleParse, indent, metadata, failOnMissingProperty,
       defaultValues, defaultTypes, runtimePropertyFilter, unknownPropertyHandler, classLoader);
   }
