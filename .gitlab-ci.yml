@@ -1,0 +1,60 @@
+image: iad.ocir.io/odx-stateservice/build/builder:jdk8
+
+stages:
+  - build
+  - deploy
+  - release
+    
+maven_build:
+  stage: build
+  script:
+    - export
+    - echo $MAVEN_SETTINGS_XML > settings.xml
+    - mvn -B -s settings.xml $OVERRIDE clean install
+  artifacts:
+    when: always
+    paths:
+    - "*/target/test-output"
+    - "*/target/surefire-reports"
+    - "*/target/failsafe-reports"
+  tags:
+    - docker
+    - privileged
+
+maven_deploy:
+  stage: deploy
+  script:
+    - export
+    - echo $MAVEN_SETTINGS_XML > settings.xml
+    - > 
+      mvn -B -DaltSnapshotDeploymentRepository=snapshots::default::$MAVEN_SNAPSHOTS_URL 
+      -DaltReleaseDeploymentRepository=releases::default::$MAVEN_RELEASES_URL
+      -DskipTests=true -s settings.xml $OVERRIDE clean install deploy
+  tags:
+    - docker
+    - privileged
+
+release:
+  stage: release
+  script:
+      - export
+      - eval $(ssh-agent -s)
+      - ssh-add <(echo "$SSH_PRIVATE_KEY")
+      - mkdir -p ~/.ssh
+      - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" >> ~/.ssh/config
+      - echo $MAVEN_SETTINGS_XML > settings.xml
+      - if [ -z "$RELEASE_VERSION" ]; then RELEASE_VERSION=1.0.0-edge-$CI_JOB_ID ; fi
+      - echo "Releasing version $RELEASE_VERSION"
+      - mvn -B -s settings.xml versions:set -DnewVersion=$RELEASE_VERSION
+      - git config user.email 'noreply@oracle.com'
+      - git config user.name 'Automated commit'
+      - git config http.sslVerify "false"
+      - git branch -D release || true
+      - git checkout -b release
+      - git commit -a -m 'Setting version to '$RELEASE_VERSION''
+      - git tag v$RELEASE_VERSION
+      - git push $SSH_GIT_REPOSITORY v$RELEASE_VERSION
+  tags:
+    - docker
+    - privileged
+  when: manual
