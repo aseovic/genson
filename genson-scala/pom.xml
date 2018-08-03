@@ -14,8 +14,8 @@
   <description>Genson extension for Scala language</description>
 
   <properties>
-    <scala.version>2.11</scala.version>
-    <scala.range.version>2.11.11</scala.range.version>
+    <scala.version>2.12</scala.version>
+    <scala.range.version>2.12.4</scala.range.version>
   </properties>
 
   <dependencies>
