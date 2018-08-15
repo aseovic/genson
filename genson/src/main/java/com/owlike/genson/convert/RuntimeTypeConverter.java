@@ -54,6 +54,7 @@ public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Co
             && !isSimpleType(obj)) {
           ensureNoCircularRefs(obj, ctx);
           ctx.genson.serialize(obj, obj.getClass(), writer, ctx);
+          clearCircularCheckRefs(ctx);
         } else {
           wrapped.serialize(obj, writer, ctx);
         }
@@ -89,6 +90,10 @@ public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Co
           throw new JsonBindingException("Cyclic object graphs are not supported.");
         }
       }
+    }
+
+    private void clearCircularCheckRefs(Context ctx) {
+      ctx.remove(CYCLE_KEY, Set.class);
     }
 
 
