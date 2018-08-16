@@ -114,6 +114,7 @@ public class BeanDescriptor<T> implements Converter<T> {
         // the interface type, then deserialize into the that
         // type.
         Class<?> defaultObjectClass = ctx.genson.defaultClass(ValueType.OBJECT);
+        Exception thrown = null;
         if (ofClass.isAssignableFrom(defaultObjectClass)) {
           final int modifiers = defaultObjectClass.getModifiers();
           if ((!java.lang.reflect.Modifier.isAbstract(modifiers)
@@ -126,12 +127,16 @@ public class BeanDescriptor<T> implements Converter<T> {
                 return (T) c.deserialize(reader, ctx);
               }
             } catch (Exception e) {
-              e.printStackTrace();
+              thrown = e;
             }
           }
         }
-        throw new JsonBindingException("No constructor has been found for type "
-            + ofClass);
+        String message = "No constructor has been found for type " + ofClass;
+        if (null != thrown) {
+            throw new JsonBindingException(message, thrown);
+        } else {
+            throw new JsonBindingException(message);
+        }
       }
       bean = _deserWithCtrArgs(reader, ctx);
     }
