@@ -2,11 +2,14 @@ package com.owlike.genson.convert;
 
 import java.lang.reflect.Type;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.owlike.genson.Context;
 import com.owlike.genson.Converter;
 import com.owlike.genson.Genson;
+import com.owlike.genson.JsonBindingException;
 import com.owlike.genson.Wrapper;
 import com.owlike.genson.reflect.TypeUtil;
 import com.owlike.genson.stream.ObjectReader;
@@ -19,6 +22,8 @@ import com.owlike.genson.stream.ObjectWriter;
  * @author eugen
  */
 public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Converter<T> {
+
+  private static final String CYCLE_KEY = "cycle-detection";
 
     public static class RuntimeTypeConverterFactory extends ChainedFactory {
         @SuppressWarnings({"unchecked", "rawtypes"})
@@ -43,10 +48,16 @@ public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Co
     }
 
     public void serialize(T obj, ObjectWriter writer, Context ctx) throws Exception {
-        if (obj != null && !tClass.equals(obj.getClass()) && !isContainer(obj))
-            ctx.genson.serialize(obj, obj.getClass(), writer, ctx);
-        else
-            wrapped.serialize(obj, writer, ctx);
+        if (obj != null
+            && !tClass.equals(obj.getClass())
+            && !isContainer(obj)
+            && !isSimpleType(obj)) {
+          ensureNoCircularRefs(obj, ctx);
+          ctx.genson.serialize(obj, obj.getClass(), writer, ctx);
+          clearCircularCheckRefs(ctx);
+        } else {
+          wrapped.serialize(obj, writer, ctx);
+        }
     }
 
     public T deserialize(ObjectReader reader, Context ctx) throws Exception {
@@ -58,4 +69,32 @@ public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Co
                 obj instanceof Collection ||
                 obj instanceof Map;
     }
+
+    private boolean isSimpleType(T obj) {
+      return obj instanceof Boolean ||
+          obj instanceof Number ||
+          obj instanceof String;
+    }
+
+    private void ensureNoCircularRefs(T obj, Context ctx) {
+      if (!isContainer(obj) && !isSimpleType(obj))
+      {
+        Set<Object> seen = ctx.get(CYCLE_KEY, Set.class);
+        if (seen == null)
+        {
+          seen = new HashSet<>();
+          ctx.store(CYCLE_KEY, seen);
+        }
+        if (!seen.add(obj))
+        {
+          throw new JsonBindingException("Cyclic object graphs are not supported.");
+        }
+      }
+    }
+
+    private void clearCircularCheckRefs(Context ctx) {
+      ctx.remove(CYCLE_KEY, Set.class);
+    }
+
+
 }
