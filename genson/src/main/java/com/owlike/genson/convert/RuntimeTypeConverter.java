@@ -49,8 +49,7 @@ public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Co
     public void serialize(T obj, ObjectWriter writer, Context ctx) throws Exception {
         if (obj != null
             && !tClass.equals(obj.getClass())
-            && !isContainer(obj)
-            && !isSimpleType(obj)) {
+            && !isContainer(obj)) {
           ensureNoCircularRefs(obj, ctx);
           ctx.genson.serialize(obj, obj.getClass(), writer, ctx);
           clearCircularCheckRefs(obj, ctx);
@@ -76,7 +75,7 @@ public class RuntimeTypeConverter<T> extends Wrapper<Converter<T>> implements Co
     }
 
   private void ensureNoCircularRefs(T obj, Context ctx) {
-    if (!isContainer(obj) && !isSimpleType(obj)) {
+    if (!isSimpleType(obj)) {
       Map seen = ctx.get(CYCLE_KEY, Map.class);
       if (seen == null) {
         seen = new IdentityHashMap<>();
