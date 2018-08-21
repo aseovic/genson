@@ -78,7 +78,7 @@ public final class Genson {
   private final DefaultTypes defaultTypes;
   private final RuntimePropertyFilter runtimePropertyFilter;
   private final UnknownPropertyHandler unknownPropertyHandler;
-  private final ClassLoader loader;
+  private volatile ClassLoader loader;
 
   /**
    * The default constructor will use the default configuration provided by the {@link GensonBuilder}.
@@ -701,6 +701,10 @@ public final class Genson {
 
   public ClassLoader getClassLoader() {
     return loader;
+  }
+
+  public void setLoader(final ClassLoader loader) {
+    this.loader = loader;
   }
 
   /**
