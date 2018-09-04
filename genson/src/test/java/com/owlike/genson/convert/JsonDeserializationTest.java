@@ -414,6 +414,17 @@ public class JsonDeserializationTest {
     assertEquals(expected, result);
   }
 
+  @Test
+  public void testDeserializationCollectionNullElementsWithSkipNullTrue() {
+    Genson genson = new GensonBuilder().setSkipNull(true).create();
+    List result = genson.deserialize("[\"a\",null,\"b\"]", List.class);
+    List<String> strings = new ArrayList<>();
+    strings.add("a");
+    strings.add(null);
+    strings.add("b");
+    assertEquals(strings, result);
+  }
+
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public static class BeanWithOptionals {
     @JsonProperty
