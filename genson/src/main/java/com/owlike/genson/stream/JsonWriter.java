@@ -479,7 +479,7 @@ public class JsonWriter implements ObjectWriter {
   }
 
   public ObjectWriter writeNull() {
-    if (skipNull && _ctx.peek() != JsonType.ARRAY) {
+    if (skipNull && _ctx.peek() == JsonType.OBJECT) {
       _name = null;
     } else {
       beforeValue();
