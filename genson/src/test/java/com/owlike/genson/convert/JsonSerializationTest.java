@@ -1,5 +1,6 @@
 package com.owlike.genson.convert;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -142,6 +143,16 @@ public class JsonSerializationTest {
         genson.serialize(OptionalDouble.empty()));
     assertEquals("{\"value\":42.0}",
         genson.serialize(OptionalDouble.of(42D)));
+  }
+
+  @Test
+  public void testSerializationCollectionNullElementsWithSkipNullTrue() {
+    genson = new GensonBuilder().setSkipNull(true).create();
+    List<String> strings = new ArrayList<>();
+    strings.add("a");
+    strings.add(null);
+    strings.add("b");
+    assertEquals("[\"a\",null,\"b\"]", genson.serialize(strings));
   }
 
   private Primitives createPrimitives() {
