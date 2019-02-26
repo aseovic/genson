@@ -446,8 +446,26 @@ public class JsonWriter implements ObjectWriter {
     int last = 0;
     final int length = value.length();
     final char[] carray = value.toCharArray();
-    for (int i = 0; i < length; i++) {
+
+    // If value is a single unicode escape, bypass existing escape logic
+    // and write the value directly.  This avoids the backslash being
+    // needlessly escaped.
+    if (length == 6 && carray[0] == '\\' && carray[1] == 'u') {
+      for (int i = 2; i < length; i++) {
+        int ch = carray[i];
+        if (ch < 30 || ch > 39) {
+          break;
+        }
+      }
+      last = carray.length;
+      writeToBuffer(carray, 0, last);
+    }
+
+    for (int i = last; i < length; i++) {
       char c = carray[i];
+      if (carray[i] == '\\' && carray[i + 1] == 'u') {
+        continue;
+      }
       char[] replacement;
       if (c < 128) {
         replacement = replacements[c];
@@ -468,6 +486,7 @@ public class JsonWriter implements ObjectWriter {
       writeToBuffer(replacement, 0, replacement.length);
       last = i + 1;
     }
+
     if (last < length) {
       writeToBuffer(carray, last, length - last);
     }

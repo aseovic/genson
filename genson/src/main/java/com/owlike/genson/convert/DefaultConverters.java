@@ -571,12 +571,12 @@ public final class DefaultConverters {
     }
 
     public void serialize(Character obj, ObjectWriter writer, Context ctx) {
-      writer.writeValue(obj.toString());
+      writer.writeValue(String.format("\\u%04x", (int) obj)); // only supports basic lingual plane
     }
 
     public Character deserialize(ObjectReader reader, Context ctx) {
       String str = reader.valueAsString();
-      if (str.length() > 1) throw new JsonBindingException(
+      if (str.length() > 1 && str.charAt(0) != '\\') throw new JsonBindingException(
         "Could not convert a string with length greater than 1 to a single char."
       );
 

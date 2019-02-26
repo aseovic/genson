@@ -402,6 +402,11 @@ public class JsonDeserializationTest {
   }
 
   @Test
+  public void testDeserializationChar() {
+    assertEquals('C', genson.deserialize("\"\\u0043\"", Object.class));
+  }
+
+  @Test
   public void testDeserializationOfBeanWithOptionals() {
     BeanWithOptionals expected = new BeanWithOptionals(Optional.of("Hello World"),
         OptionalInt.of(42),
