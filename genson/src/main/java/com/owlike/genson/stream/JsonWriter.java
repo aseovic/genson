@@ -450,6 +450,9 @@ public class JsonWriter implements ObjectWriter {
       char c = carray[i];
       char[] replacement;
       if (c < 128) {
+        if (c == '\\' && carray[i + 1] == 'u') {
+          continue;
+        }
         replacement = replacements[c];
         if (replacement == null) {
           continue;

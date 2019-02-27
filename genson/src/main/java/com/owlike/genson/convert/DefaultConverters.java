@@ -571,7 +571,7 @@ public final class DefaultConverters {
     }
 
     public void serialize(Character obj, ObjectWriter writer, Context ctx) {
-      writer.writeValue(obj.toString());
+      writer.writeValue(String.format("\\u%04x", (int) obj)); // only supports basic lingual plane
     }
 
     public Character deserialize(ObjectReader reader, Context ctx) {

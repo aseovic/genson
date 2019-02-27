@@ -189,7 +189,7 @@ public class JsonReader implements ObjectReader {
   }
 
   public String valueAsString() {
-    if (STRING == valueType) return _stringValue;
+    if (STRING == valueType || CHAR == valueType) return _stringValue;
     if (INTEGER == valueType) return "" + _intValue;
     if (DOUBLE == valueType) return "" + _doubleValue;
     if (NULL == valueType) return null;
@@ -357,6 +357,7 @@ public class JsonReader implements ObjectReader {
   public ValueType next() {
     _metadata_readen = false;
     _first = false;
+    valueType = null;
 
     char ctoken = (char) readNextToken(false);
 
@@ -392,7 +393,7 @@ public class JsonReader implements ObjectReader {
     char ctoken = (char) readNextToken(false);
     if (ctoken == '"') {
       _stringValue = consumeString(ctoken);
-      return STRING;
+      return valueType == CHAR && _stringValue.length() == 1 ? CHAR : STRING;
     } else if (ctoken == '[') return ARRAY;
     else if (ctoken == '{') return OBJECT;
     else return consumeLiteral();
@@ -849,6 +850,7 @@ public class JsonReader implements ObjectReader {
         return token;
 
       case 'u':
+        valueType = CHAR;
         break;
 
       default:

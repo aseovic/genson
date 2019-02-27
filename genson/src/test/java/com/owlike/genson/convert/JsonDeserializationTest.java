@@ -402,6 +402,13 @@ public class JsonDeserializationTest {
   }
 
   @Test
+  public void testDeserializationChar() {
+    assertEquals('C', genson.deserialize("\"\\u0043\"", Object.class));
+    // ensure multiple unicode escapes are not considered a char type and is returned as String
+    assertEquals("CCC", genson.deserialize("\"\\u0043\\u0043\\u0043\"", Object.class));
+  }
+
+  @Test
   public void testDeserializationOfBeanWithOptionals() {
     BeanWithOptionals expected = new BeanWithOptionals(Optional.of("Hello World"),
         OptionalInt.of(42),

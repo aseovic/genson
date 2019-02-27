@@ -146,6 +146,11 @@ public class JsonSerializationTest {
   }
 
   @Test
+  public void testChar() {
+    assertEquals("\"\\u0043\"", genson.serialize('C'));
+  }
+
+  @Test
   public void testSerializationCollectionNullElementsWithSkipNullTrue() {
     genson = new GensonBuilder().setSkipNull(true).create();
     List<String> strings = new ArrayList<>();
