@@ -7,6 +7,7 @@ public enum ValueType {
   ARRAY(List.class),
   OBJECT(Map.class),
   STRING(String.class),
+  CHAR(Character.class),
   INTEGER(Long.class),
   DOUBLE(Double.class),
   BOOLEAN(Boolean.class),
